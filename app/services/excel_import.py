@@ -93,20 +93,49 @@ def parse_excel(file_content: bytes, extract_photos: bool = False) -> Tuple[List
 
         # Find photo column index if it exists
         photo_col_idx = None
+        pledged_col_idx = None
         for idx, header in enumerate(headers):
             if header.lower() in ('photo', 'image', 'picture', 'pic'):
                 photo_col_idx = idx
-                break
+            if header.lower() == 'pledged':
+                pledged_col_idx = idx
 
-        # Process data rows
-        for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+        # Check if row 2 is a sub-header row (Y/N/N/A under Pledged)
+        skip_row_2 = False
+        if pledged_col_idx is not None:
+            row2 = list(ws.iter_rows(min_row=2, max_row=2, values_only=True))
+            if row2:
+                row2_vals = list(row2[0])
+                if (pledged_col_idx < len(row2_vals) and
+                    str(row2_vals[pledged_col_idx] or "").strip().upper() in ("Y", "YES")):
+                    skip_row_2 = True
+
+        # Process data rows (skip sub-header row if detected)
+        start_row = 3 if skip_row_2 else 2
+        for row_num, row in enumerate(ws.iter_rows(min_row=start_row, values_only=True), start=start_row):
             row_data = {}
             row_data['_row_num'] = row_num  # Store row number for image matching
+            row_values = list(row)
 
-            for idx, value in enumerate(row):
+            for idx, value in enumerate(row_values):
                 if idx < len(headers):
                     header = headers[idx]
                     row_data[header] = value
+
+            # Handle Pledged sub-columns (Y / N / N/A)
+            if pledged_col_idx is not None:
+                pledged_y = row_values[pledged_col_idx] if pledged_col_idx < len(row_values) else None
+                pledged_n = row_values[pledged_col_idx + 1] if (pledged_col_idx + 1) < len(row_values) else None
+                pledged_na = row_values[pledged_col_idx + 2] if (pledged_col_idx + 2) < len(row_values) else None
+
+                if pledged_y and str(pledged_y).strip():
+                    row_data['_pledged_status'] = 'yes'
+                elif pledged_n and str(pledged_n).strip():
+                    row_data['_pledged_status'] = 'no'
+                elif pledged_na and str(pledged_na).strip():
+                    row_data['_pledged_status'] = 'undecided'
+                else:
+                    row_data['_pledged_status'] = 'no'
 
             # Skip empty rows
             name = row_data.get("Name") or row_data.get("name")
@@ -220,12 +249,17 @@ def import_voters_from_excel(
                         stats["focals_created"] += 1
                     voter_focals.append(focal_cache[focal_key])
 
-            # Determine pledged status
+            # Determine pledged status from parsed sub-columns
             is_pledged = False
-            pledged_val = row.get("Pledged") or row.get("Y") or row.get("pledged")
-            if pledged_val:
-                pledged_str = str(pledged_val).upper().strip()
-                is_pledged = pledged_str in ("Y", "YES", "TRUE", "1")
+            pledged_status = row.get('_pledged_status')
+            if pledged_status:
+                is_pledged = pledged_status == 'yes'
+            else:
+                # Fallback: single-column pledged field
+                pledged_val = row.get("Pledged") or row.get("pledged")
+                if pledged_val:
+                    pledged_str = str(pledged_val).upper().strip()
+                    is_pledged = pledged_str in ("Y", "YES", "TRUE", "1")
 
             # Check for photo from embedded images
             photo_path = None
