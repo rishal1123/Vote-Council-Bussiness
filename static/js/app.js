@@ -117,16 +117,40 @@ function dismissInstall() {
     localStorage.setItem('pwaInstallDismissed', 'true');
 }
 
-// Service Worker Registration
+// Service Worker Registration with auto-update
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/static/sw.js')
             .then(registration => {
                 console.log('ServiceWorker registered:', registration.scope);
+
+                // Check for updates immediately
+                registration.update();
+
+                // Check for updates on every page load
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+                            // New version activated, reload to use it
+                            console.log('New version available, reloading...');
+                            window.location.reload();
+                        }
+                    });
+                });
             })
             .catch(error => {
                 console.log('ServiceWorker registration failed:', error);
             });
+    });
+
+    // Also reload when the controlling service worker changes
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+        }
     });
 }
 
