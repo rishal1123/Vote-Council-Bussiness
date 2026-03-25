@@ -1,25 +1,11 @@
 version: "3.8"
 
 services:
-  caddy:
-    image: caddy:2-alpine
-    container_name: caddy
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy-data:/data
-      - caddy-config:/config
-    depends_on:
-      - votecouncil
-    restart: unless-stopped
-
   votecouncil:
     build: .
     container_name: votecouncil
-    expose:
-      - "8000"
+    ports:
+      - "443:8000"
     volumes:
       - db-data:/app/data
       - uploads:/app/uploads
@@ -28,11 +14,9 @@ services:
       - SECRET_KEY=change-this-in-production
     command: >
       sh -c "pip install --no-cache-dir -r requirements.txt &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4 --proxy-headers --forwarded-allow-ips='*'"
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4"
     restart: unless-stopped
 
 volumes:
   db-data:
   uploads:
-  caddy-data:
-  caddy-config:
