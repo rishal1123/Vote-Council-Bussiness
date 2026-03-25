@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Activity Logs - VoteCouncil{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-journal-text"></i> Activity Logs
+        </h1>
+        <div>
+            <button class="btn btn-outline-primary me-2" onclick="loadLogs()">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+            <button class="btn btn-outline-danger" onclick="clearOldLogs()">
+                <i class="bi bi-trash"></i> Clear Old Logs
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="filterForm" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Action Type</label>
+                    <select class="form-select" id="actionFilter">
+                        <option value="">All Actions</option>
+                        <option value="login">Login</option>
+                        <option value="logout">Logout</option>
+                        <option value="voter_create">Voter Create</option>
+                        <option value="voter_update">Voter Update</option>
+                        <option value="voter_delete">Voter Delete</option>
+                        <option value="voter_status_update">Vote Status Update</option>
+                        <option value="import_complete">Import Complete</option>
+                        <option value="system_reset">System Reset</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-control" id="usernameFilter" placeholder="Search user...">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Time Range</label>
+                    <select class="form-select" id="daysFilter">
+                        <option value="1">Last 24 hours</option>
+                        <option value="7" selected>Last 7 days</option>
+                        <option value="30">Last 30 days</option>
+                        <option value="90">Last 90 days</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="button" class="btn btn-primary" onclick="loadLogs()">
+                        <i class="bi bi-search"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Logs Table -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Entity</th>
+                            <th>Details</th>
+                            <th>IP Address</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTable">
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <span id="logCount">0 logs</span>
+            <nav>
+                <ul class="pagination mb-0" id="pagination"></ul>
+            </nav>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 0;
+const pageSize = 50;
+
+document.addEventListener('DOMContentLoaded', loadLogs);
+
+async function loadLogs() {
+    const action = document.getElementById('actionFilter').value;
+    const username = document.getElementById('usernameFilter').value;
+    const days = document.getElementById('daysFilter').value;
+
+    let url = `/admin/logs/data?days=${days}&limit=${pageSize}&offset=${currentPage * pageSize}`;
+    if (action) url += `&action=${action}`;
+    if (username) url += `&username=${encodeURIComponent(username)}`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        document.getElementById('logCount').textContent = `${data.total} logs`;
+        renderLogs(data.logs);
+        renderPagination(data.total);
+    } catch (error) {
+        document.getElementById('logsTable').innerHTML = `
+            <tr><td colspan="6" class="text-center text-danger">Error loading logs</td></tr>
+        `;
+    }
+}
+
+function renderLogs(logs) {
+    const tbody = document.getElementById('logsTable');
+
+    if (logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5">No logs found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = logs.map(log => `
+        <tr>
+            <td><small>${formatDateTime(log.timestamp)}</small></td>
+            <td><strong>${log.username}</strong></td>
+            <td>${getActionBadge(log.action)}</td>
+            <td>${log.entity_type ? `${log.entity_type} #${log.entity_id || ''}` : '-'}</td>
+            <td><small class="text-muted">${log.details || '-'}</small></td>
+            <td><small class="text-muted">${log.ip_address || '-'}</small></td>
+        </tr>
+    `).join('');
+}
+
+function getActionBadge(action) {
+    const badges = {
+        'login': 'success',
+        'logout': 'secondary',
+        'login_failed': 'danger',
+        'voter_create': 'primary',
+        'voter_update': 'info',
+        'voter_delete': 'danger',
+        'voter_status_update': 'warning',
+        'import_complete': 'success',
+        'system_reset': 'danger'
+    };
+    const type = badges[action] || 'secondary';
+    return `<span class="badge bg-${type}">${action.replace(/_/g, ' ')}</span>`;
+}
+
+function formatDateTime(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleString();
+}
+
+function renderPagination(total) {
+    const totalPages = Math.ceil(total / pageSize);
+    const pagination = document.getElementById('pagination');
+
+    if (totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
+
+    let html = `
+        <li class="page-item ${currentPage === 0 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="goToPage(${currentPage - 1})">&laquo;</a>
+        </li>
+    `;
+
+    for (let i = 0; i < totalPages && i < 10; i++) {
+        html += `
+            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="goToPage(${i})">${i + 1}</a>
+            </li>
+        `;
+    }
+
+    html += `
+        <li class="page-item ${currentPage >= totalPages - 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="goToPage(${currentPage + 1})">&raquo;</a>
+        </li>
+    `;
+
+    pagination.innerHTML = html;
+}
+
+function goToPage(page) {
+    currentPage = page;
+    loadLogs();
+}
+
+async function clearOldLogs() {
+    const days = prompt('Keep logs from the last N days (delete older logs):', '30');
+    if (!days) return;
+
+    try {
+        const response = await fetch(`/admin/logs?days_to_keep=${days}`, { method: 'DELETE' });
+        const data = await response.json();
+        showToast(data.message, 'success');
+        loadLogs();
+    } catch (error) {
+        showToast('Failed to clear logs', 'danger');
+    }
+}
+</script>
+{% endblock %}

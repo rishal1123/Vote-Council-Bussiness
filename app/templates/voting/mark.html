@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+
+{% block title %}Vote Day - Mark Voters{% endblock %}
+
+{% block extra_css %}
+<style>
+    .voter-card {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    .voter-photo {
+        width: 150px;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+    .voter-photo-placeholder {
+        width: 150px;
+        height: 150px;
+        background: #e9ecef;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        color: #6c757d;
+    }
+    .status-btn {
+        min-width: 120px;
+        padding: 15px 20px;
+        font-size: 1.1rem;
+    }
+    .candidate-option {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .candidate-option:hover {
+        background-color: #f8f9fa;
+    }
+    .candidate-option.selected {
+        background-color: #e7f1ff;
+        border-color: #0d6efd;
+    }
+    .search-section {
+        max-width: 500px;
+        margin: 0 auto;
+    }
+    #searchInput {
+        font-size: 1.3rem;
+        padding: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="text-center mb-4">
+        <h1 class="h2">
+            <i class="bi bi-check2-circle"></i> Vote Day - Mark Voters
+        </h1>
+        <p class="text-muted">Search by ID number to mark voting status</p>
+    </div>
+
+    <!-- Search Section -->
+    <div class="search-section mb-4">
+        <div class="input-group input-group-lg">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control" id="searchInput"
+                   placeholder="Enter ID number..." autofocus>
+            <button class="btn btn-primary" type="button" onclick="searchVoter()">
+                Search
+            </button>
+        </div>
+        <div class="form-text text-center">Press Enter to search</div>
+    </div>
+
+    <!-- Voter Card (hidden until search) -->
+    <div id="voterSection" class="d-none">
+        <div class="voter-card card shadow">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-auto">
+                        <div id="voterPhoto"></div>
+                    </div>
+                    <div class="col">
+                        <h3 id="voterName" class="mb-1"></h3>
+                        <p class="text-muted mb-2">
+                            <span id="voterId"></span>
+                            <span class="mx-2">|</span>
+                            <span id="voterBox"></span>
+                        </p>
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <span id="voterGender" class="badge bg-secondary"></span>
+                            <span id="voterAge" class="badge bg-secondary"></span>
+                            <span id="voterPledged" class="badge"></span>
+                            <span id="voterCurrentStatus" class="badge"></span>
+                        </div>
+                        <p id="voterContact" class="mb-0 text-muted small"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vote Status Selection -->
+            <div class="card-body border-top">
+                <h5 class="mb-3"><i class="bi bi-check-square"></i> Mark Vote Status</h5>
+                <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
+                    <button class="btn btn-outline-success status-btn" onclick="setStatus('voted_pledged')">
+                        <i class="bi bi-check-circle"></i><br>Voted Pledged
+                    </button>
+                    <button class="btn btn-outline-danger status-btn" onclick="setStatus('voted_other')">
+                        <i class="bi bi-x-circle"></i><br>Voted Other
+                    </button>
+                    <button class="btn btn-outline-warning status-btn" onclick="setStatus('undecided')">
+                        <i class="bi bi-question-circle"></i><br>Undecided
+                    </button>
+                    <button class="btn btn-outline-secondary status-btn" onclick="setStatus('not_voted')">
+                        <i class="bi bi-dash-circle"></i><br>Not Voted
+                    </button>
+                </div>
+            </div>
+
+            <!-- Candidate Selection (shown after voting) -->
+            <div id="candidateSection" class="card-body border-top d-none">
+                <h5 class="mb-3"><i class="bi bi-person-check"></i> Who did they vote for?</h5>
+                <div id="candidateList" class="row g-2">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Confirm Button -->
+            <div class="card-footer">
+                <button id="confirmBtn" class="btn btn-primary btn-lg w-100" onclick="confirmVote()" disabled>
+                    <i class="bi bi-check2"></i> Confirm & Save
+                </button>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Marks</h5>
+                <span class="badge bg-primary" id="todayCount">0 today</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" id="recentMarks">
+                    <div class="list-group-item text-center text-muted">No marks yet</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- No Results Message -->
+    <div id="noResults" class="d-none text-center py-5">
+        <i class="bi bi-search" style="font-size: 3rem; color: #6c757d;"></i>
+        <h4 class="mt-3 text-muted">No voter found</h4>
+        <p class="text-muted">Try searching with a different ID number</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentVoter = null;
+let selectedStatus = null;
+let selectedCandidate = null;
+let candidates = [];
+let recentMarks = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // Load candidates
+    const response = await fetch('/candidates');
+    candidates = await response.json();
+
+    // Enter key to search
+    document.getElementById('searchInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') searchVoter();
+    });
+
+    // Focus search on page load
+    document.getElementById('searchInput').focus();
+});
+
+async function searchVoter() {
+    const query = document.getElementById('searchInput').value.trim();
+    if (!query) return;
+
+    try {
+        const response = await fetch(`/voting/search?q=${encodeURIComponent(query)}`);
+        if (response.ok) {
+            const voter = await response.json();
+            displayVoter(voter);
+        } else {
+            showNoResults();
+        }
+    } catch (error) {
+        showToast('Error searching for voter', 'danger');
+    }
+}
+
+function displayVoter(voter) {
+    currentVoter = voter;
+    selectedStatus = null;
+    selectedCandidate = null;
+
+    document.getElementById('voterSection').classList.remove('d-none');
+    document.getElementById('noResults').classList.add('d-none');
+
+    // Photo
+    const photoDiv = document.getElementById('voterPhoto');
+    if (voter.photo_path) {
+        photoDiv.innerHTML = `<img src="/uploads/${voter.photo_path}" class="voter-photo" alt="Photo">`;
+    } else {
+        photoDiv.innerHTML = `<div class="voter-photo-placeholder"><i class="bi bi-person"></i></div>`;
+    }
+
+    // Basic info
+    document.getElementById('voterName').textContent = voter.name;
+    document.getElementById('voterId').textContent = `ID: ${voter.voter_id || 'N/A'}`;
+    document.getElementById('voterBox').textContent = voter.box_name || 'No Box';
+    document.getElementById('voterGender').textContent = voter.gender || '?';
+    document.getElementById('voterAge').textContent = voter.age ? `${voter.age} yrs` : 'Age unknown';
+
+    // Pledged badge
+    const pledgedBadge = document.getElementById('voterPledged');
+    if (voter.is_pledged) {
+        pledgedBadge.className = 'badge bg-success';
+        pledgedBadge.textContent = 'Pledged';
+    } else {
+        pledgedBadge.className = 'badge bg-secondary';
+        pledgedBadge.textContent = 'Not Pledged';
+    }
+
+    // Current status badge
+    const statusBadge = document.getElementById('voterCurrentStatus');
+    const statusColors = {
+        'not_voted': 'secondary',
+        'voted_pledged': 'success',
+        'voted_other': 'danger',
+        'undecided': 'warning'
+    };
+    statusBadge.className = `badge bg-${statusColors[voter.vote_status] || 'secondary'}`;
+    statusBadge.textContent = voter.vote_status.replace(/_/g, ' ');
+
+    // Contact
+    document.getElementById('voterContact').textContent = voter.contact || voter.new_contact || '';
+
+    // Reset buttons
+    document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('candidateSection').classList.add('d-none');
+    document.getElementById('confirmBtn').disabled = true;
+
+    // Populate candidates
+    renderCandidates();
+}
+
+function renderCandidates() {
+    const list = document.getElementById('candidateList');
+    list.innerHTML = candidates.map(c => `
+        <div class="col-6 col-md-4">
+            <div class="card candidate-option p-3 text-center" data-id="${c.id}" onclick="selectCandidate(${c.id})">
+                <div class="fw-bold">${c.name}</div>
+                <small class="text-muted">${c.party || ''} ${c.number ? '#' + c.number : ''}</small>
+                ${c.is_pledged ? '<span class="badge bg-success mt-1">Our Candidate</span>' : ''}
+            </div>
+        </div>
+    `).join('');
+
+    // Add "Unknown" option
+    list.innerHTML += `
+        <div class="col-6 col-md-4">
+            <div class="card candidate-option p-3 text-center" data-id="0" onclick="selectCandidate(0)">
+                <div class="fw-bold">Unknown</div>
+                <small class="text-muted">Did not disclose</small>
+            </div>
+        </div>
+    `;
+}
+
+function setStatus(status) {
+    selectedStatus = status;
+
+    // Update button states
+    document.querySelectorAll('.status-btn').forEach(btn => {
+        btn.classList.remove('active', 'btn-success', 'btn-danger', 'btn-warning', 'btn-secondary');
+        btn.classList.add('btn-outline-success', 'btn-outline-danger', 'btn-outline-warning', 'btn-outline-secondary');
+    });
+
+    const btnMap = {
+        'voted_pledged': 0,
+        'voted_other': 1,
+        'undecided': 2,
+        'not_voted': 3
+    };
+    const btn = document.querySelectorAll('.status-btn')[btnMap[status]];
+    const colorClass = status === 'voted_pledged' ? 'success' :
+                       status === 'voted_other' ? 'danger' :
+                       status === 'undecided' ? 'warning' : 'secondary';
+    btn.classList.remove(`btn-outline-${colorClass}`);
+    btn.classList.add(`btn-${colorClass}`, 'active');
+
+    // Show candidate selection for voted statuses
+    if (status === 'voted_pledged' || status === 'voted_other' || status === 'undecided') {
+        document.getElementById('candidateSection').classList.remove('d-none');
+    } else {
+        document.getElementById('candidateSection').classList.add('d-none');
+        selectedCandidate = null;
+    }
+
+    updateConfirmButton();
+}
+
+function selectCandidate(id) {
+    selectedCandidate = id;
+
+    // Update selection
+    document.querySelectorAll('.candidate-option').forEach(el => {
+        el.classList.remove('selected');
+    });
+    document.querySelector(`.candidate-option[data-id="${id}"]`).classList.add('selected');
+
+    updateConfirmButton();
+}
+
+function updateConfirmButton() {
+    const btn = document.getElementById('confirmBtn');
+
+    if (selectedStatus === 'not_voted') {
+        btn.disabled = false;
+    } else if (selectedStatus && selectedCandidate !== null) {
+        btn.disabled = false;
+    } else {
+        btn.disabled = true;
+    }
+}
+
+async function confirmVote() {
+    if (!currentVoter || !selectedStatus) return;
+
+    const data = {
+        vote_status: selectedStatus,
+        voted_for: selectedCandidate || null
+    };
+
+    try {
+        const response = await fetch(`/voting/mark/${currentVoter.id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            showToast(`Marked ${currentVoter.name} as ${selectedStatus.replace(/_/g, ' ')}`, 'success');
+            addToRecentMarks(currentVoter, selectedStatus);
+
+            // Clear and focus search
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchInput').focus();
+            document.getElementById('voterSection').classList.add('d-none');
+        } else {
+            showToast('Failed to update vote status', 'danger');
+        }
+    } catch (error) {
+        showToast('Error updating vote status', 'danger');
+    }
+}
+
+function addToRecentMarks(voter, status) {
+    const statusColors = {
+        'not_voted': 'secondary',
+        'voted_pledged': 'success',
+        'voted_other': 'danger',
+        'undecided': 'warning'
+    };
+
+    recentMarks.unshift({
+        name: voter.name,
+        voter_id: voter.voter_id,
+        status: status,
+        time: new Date().toLocaleTimeString()
+    });
+
+    // Keep only last 10
+    recentMarks = recentMarks.slice(0, 10);
+
+    // Update UI
+    const list = document.getElementById('recentMarks');
+    list.innerHTML = recentMarks.map(m => `
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+                <strong>${m.name}</strong>
+                <small class="text-muted ms-2">${m.voter_id || ''}</small>
+            </div>
+            <div>
+                <span class="badge bg-${statusColors[m.status]}">${m.status.replace(/_/g, ' ')}</span>
+                <small class="text-muted ms-2">${m.time}</small>
+            </div>
+        </div>
+    `).join('');
+
+    // Update count
+    document.getElementById('todayCount').textContent = `${recentMarks.length} recent`;
+}
+
+function showNoResults() {
+    document.getElementById('voterSection').classList.add('d-none');
+    document.getElementById('noResults').classList.remove('d-none');
+}
+</script>
+{% endblock %}

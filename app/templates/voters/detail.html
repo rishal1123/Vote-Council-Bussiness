@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Voter Details - VoteCouncil{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="mb-4">
+        <a href="/voters/list" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Voter Info Card -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-person"></i> Voter Information</h5>
+                    {% if user.role.value in ['admin', 'operator'] %}
+                    <a href="/voters/{{ voter.id }}/edit" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-pencil"></i> Edit
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h3 class="mb-1">{{ voter.name }}</h3>
+                            <p class="text-muted mb-0">
+                                {% if voter.ec_number %}EC#: {{ voter.ec_number }}{% endif %}
+                                {% if voter.voter_id %} | #{{ voter.voter_id }}{% endif %}
+                                {% if voter.national_id %} | ID: {{ voter.national_id }}{% endif %}
+                                {% if voter.gender %} | {{ voter.gender }}{% endif %}
+                                {% if voter.age %} | {{ voter.age }} years{% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <span class="badge {% if voter.is_pledged %}bg-success{% else %}bg-secondary{% endif %} fs-6">
+                                {% if voter.is_pledged %}Pledged{% else %}Not Pledged{% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Party:</strong> {{ voter.party or '-' }}</p>
+                            <p><strong>Box:</strong> {{ voter.box.name if voter.box else '-' }}</p>
+                            <p><strong>Box#:</strong> {{ voter.box_number or '-' }}</p>
+                            <p><strong>Zone:</strong> {{ voter.zone or '-' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Contact:</strong> {{ voter.contact or '-' }}</p>
+                            <p><strong>New Contact:</strong> {{ voter.new_contact or '-' }}</p>
+                            <p><strong>Address:</strong> {{ voter.address or '-' }}</p>
+                        </div>
+                    </div>
+
+                    {% if voter.previous_island or voter.previous_address or voter.current_location %}
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Previous Island:</strong> {{ voter.previous_island or '-' }}</p>
+                            <p><strong>Previous Address:</strong> {{ voter.previous_address or '-' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Current Location:</strong> {{ voter.current_location or '-' }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if voter.focals %}
+                    <hr>
+                    <p><strong>Assigned Focals:</strong></p>
+                    <div>
+                        {% for focal in voter.focals %}
+                        <span class="badge bg-primary me-1">{{ focal.name }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if voter.focal_comment %}
+                    <hr>
+                    <p><strong>Focal Comment:</strong></p>
+                    <p class="text-muted">{{ voter.focal_comment }}</p>
+                    {% endif %}
+
+                    {% if voter.remarks %}
+                    <hr>
+                    <p><strong>Remarks:</strong></p>
+                    <p class="text-muted">{{ voter.remarks }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Status & Photo Card -->
+        <div class="col-md-4">
+            <!-- Photo -->
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    {% if voter.photo_path %}
+                    <img src="/uploads/{{ voter.photo_path }}" class="img-fluid rounded mb-3" style="max-height: 200px;">
+                    {% else %}
+                    <div class="bg-light rounded d-flex align-items-center justify-content-center mb-3" style="height: 200px;">
+                        <i class="bi bi-person-square text-muted" style="font-size: 5rem;"></i>
+                    </div>
+                    {% endif %}
+
+                    {% if user.role.value in ['admin', 'operator'] %}
+                    <form id="photoForm" enctype="multipart/form-data">
+                        <input type="file" id="photoInput" accept="image/*" class="d-none" onchange="uploadPhoto()">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('photoInput').click()">
+                            <i class="bi bi-camera"></i> {% if voter.photo_path %}Change{% else %}Upload{% endif %} Photo
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Vote Status -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-clipboard-check"></i> Vote Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <span class="badge fs-5 {{ 'bg-secondary' if voter.vote_status.value == 'not_voted' else 'bg-success' if voter.vote_status.value == 'voted_pledged' else 'bg-danger' if voter.vote_status.value == 'voted_other' else 'bg-warning' }}" id="currentStatus">
+                            {{ voter.vote_status.value | replace('_', ' ') | title }}
+                        </span>
+                    </div>
+
+                    {% if voter.voted_for %}
+                    <p class="text-center text-muted">
+                        <small>Voted for: {{ voter.voted_for }}</small>
+                    </p>
+                    {% endif %}
+
+                    <hr>
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success" onclick="updateStatus('voted_pledged')">
+                            <i class="bi bi-check-circle"></i> Voted Pledged
+                        </button>
+                        <button class="btn btn-danger" onclick="updateStatus('voted_other')">
+                            <i class="bi bi-x-circle"></i> Voted Other
+                        </button>
+                        <button class="btn btn-warning" onclick="updateStatus('undecided')">
+                            <i class="bi bi-question-circle"></i> Undecided
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="updateStatus('not_voted')">
+                            <i class="bi bi-arrow-counterclockwise"></i> Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const voterId = {{ voter.id }};
+
+async function updateStatus(status) {
+    try {
+        const response = await fetch(`/voters/${voterId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ vote_status: status })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const badge = document.getElementById('currentStatus');
+            badge.textContent = data.vote_status.replace('_', ' ');
+
+            // Update badge color
+            badge.className = 'badge fs-5 ';
+            if (status === 'not_voted') badge.className += 'bg-secondary';
+            else if (status === 'voted_pledged') badge.className += 'bg-success';
+            else if (status === 'voted_other') badge.className += 'bg-danger';
+            else badge.className += 'bg-warning';
+
+            showToast('Status updated', 'success');
+        } else {
+            showToast('Failed to update status', 'danger');
+        }
+    } catch (error) {
+        showToast('Error updating status', 'danger');
+    }
+}
+
+async function uploadPhoto() {
+    const input = document.getElementById('photoInput');
+    if (!input.files[0]) return;
+
+    const formData = new FormData();
+    formData.append('photo', input.files[0]);
+
+    try {
+        const response = await fetch(`/voters/${voterId}/photo`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            showToast('Photo uploaded', 'success');
+            location.reload();
+        } else {
+            const error = await response.json();
+            showToast(error.detail || 'Failed to upload photo', 'danger');
+        }
+    } catch (error) {
+        showToast('Error uploading photo', 'danger');
+    }
+}
+</script>
+{% endblock %}

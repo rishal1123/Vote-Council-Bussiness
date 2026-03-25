@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}System Reset - VoteCouncil{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="h3 mb-4">
+        <i class="bi bi-exclamation-triangle text-danger"></i> System Reset
+    </h1>
+
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i>
+        <strong>Warning:</strong> These actions are irreversible. Use with caution.
+    </div>
+
+    <div class="row g-4">
+        <!-- Reset Vote Status -->
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="bi bi-arrow-counterclockwise"></i> Reset Vote Status</h5>
+                </div>
+                <div class="card-body">
+                    <p>Reset all voters' vote status back to "Not Voted".</p>
+                    <p class="text-muted small">This keeps all voter data but clears their voting status.</p>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-warning w-100" onclick="resetVoteStatus()">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reset Vote Status
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete All Voters -->
+        <div class="col-md-4">
+            <div class="card h-100 border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-people"></i> Delete All Voters</h5>
+                </div>
+                <div class="card-body">
+                    <p>Delete all voter records from the system.</p>
+                    <p class="text-muted small">Keeps boxes, focals, candidates, and users.</p>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-danger w-100" onclick="resetVoters()">
+                        <i class="bi bi-trash"></i> Delete All Voters
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Full System Reset -->
+        <div class="col-md-4">
+            <div class="card h-100 border-danger">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="bi bi-nuclear"></i> Full System Reset</h5>
+                </div>
+                <div class="card-body">
+                    <p>Delete <strong>ALL</strong> data from the system.</p>
+                    <p class="text-muted small">Deletes voters, boxes, focals, and candidates. Keeps users and logs.</p>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-dark w-100" onclick="resetAll()">
+                        <i class="bi bi-exclamation-octagon"></i> Full Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Stats -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-info-circle"></i> Current System Stats</h5>
+        </div>
+        <div class="card-body">
+            <div class="row text-center" id="systemStats">
+                <div class="col"><div class="spinner-border spinner-border-sm"></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', loadStats);
+
+async function loadStats() {
+    try {
+        const [voters, boxes, focals, candidates] = await Promise.all([
+            fetch('/voters/count').then(r => r.json()),
+            fetch('/boxes').then(r => r.json()),
+            fetch('/focals').then(r => r.json()),
+            fetch('/candidates').then(r => r.json())
+        ]);
+
+        document.getElementById('systemStats').innerHTML = `
+            <div class="col-md-3">
+                <h3 class="text-primary">${voters.count}</h3>
+                <p class="text-muted">Voters</p>
+            </div>
+            <div class="col-md-3">
+                <h3 class="text-info">${boxes.length}</h3>
+                <p class="text-muted">Boxes</p>
+            </div>
+            <div class="col-md-3">
+                <h3 class="text-success">${focals.length}</h3>
+                <p class="text-muted">Focals</p>
+            </div>
+            <div class="col-md-3">
+                <h3 class="text-warning">${candidates.length}</h3>
+                <p class="text-muted">Candidates</p>
+            </div>
+        `;
+    } catch (error) {
+        document.getElementById('systemStats').innerHTML = '<div class="col text-danger">Error loading stats</div>';
+    }
+}
+
+async function resetVoteStatus() {
+    if (!confirm('Are you sure you want to reset all vote statuses to "Not Voted"?')) return;
+    if (!confirm('This action cannot be undone. Continue?')) return;
+
+    try {
+        const response = await fetch('/admin/reset/vote-status', { method: 'POST' });
+        const data = await response.json();
+        showToast(data.message, 'success');
+        loadStats();
+    } catch (error) {
+        showToast('Failed to reset vote status', 'danger');
+    }
+}
+
+async function resetVoters() {
+    if (!confirm('Are you sure you want to DELETE ALL VOTERS?')) return;
+    if (!confirm('This action CANNOT be undone. All voter data will be lost. Continue?')) return;
+    if (prompt('Type "DELETE VOTERS" to confirm:') !== 'DELETE VOTERS') {
+        showToast('Reset cancelled', 'info');
+        return;
+    }
+
+    try {
+        const response = await fetch('/admin/reset/voters', { method: 'POST' });
+        const data = await response.json();
+        showToast(data.message, 'success');
+        loadStats();
+    } catch (error) {
+        showToast('Failed to delete voters', 'danger');
+    }
+}
+
+async function resetAll() {
+    if (!confirm('WARNING: This will delete ALL data including voters, boxes, focals, and candidates!')) return;
+    if (!confirm('This action CANNOT be undone. Are you absolutely sure?')) return;
+    if (prompt('Type "RESET ALL" to confirm full system reset:') !== 'RESET ALL') {
+        showToast('Reset cancelled', 'info');
+        return;
+    }
+
+    try {
+        const response = await fetch('/admin/reset/all', { method: 'POST' });
+        const data = await response.json();
+        showToast('System reset complete', 'success');
+        loadStats();
+    } catch (error) {
+        showToast('Failed to reset system', 'danger');
+    }
+}
+</script>
+{% endblock %}

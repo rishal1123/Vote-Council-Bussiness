@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Focals - VoteCouncil{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-person-badge"></i> Focals
+        </h1>
+        <button class="btn btn-primary" onclick="showAddModal()">
+            <i class="bi bi-plus-lg"></i> Add Focal
+        </button>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th class="text-center">Voters</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="focalList">
+                        <tr>
+                            <td colspan="4" class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="focalModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Add Focal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="focalForm">
+                    <input type="hidden" id="focalId">
+                    <div class="mb-3">
+                        <label for="focalName" class="form-label">Name *</label>
+                        <input type="text" class="form-control" id="focalName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="focalPhone" class="form-label">Phone</label>
+                        <input type="text" class="form-control" id="focalPhone">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveFocal()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let focals = [];
+const modal = new bootstrap.Modal(document.getElementById('focalModal'));
+
+document.addEventListener('DOMContentLoaded', loadFocals);
+
+async function loadFocals() {
+    const response = await fetch('/focals');
+    focals = await response.json();
+    renderFocals();
+}
+
+function renderFocals() {
+    const tbody = document.getElementById('focalList');
+
+    if (focals.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-5">No focals found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = focals.map(focal => `
+        <tr>
+            <td><strong>${focal.name}</strong></td>
+            <td>${focal.phone || '-'}</td>
+            <td class="text-center">
+                <a href="/voters/list?focal_id=${focal.id}" class="badge bg-primary">${focal.voter_count}</a>
+            </td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-outline-primary" onclick="showEditModal(${focal.id})">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteFocal(${focal.id})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function showAddModal() {
+    document.getElementById('modalTitle').textContent = 'Add Focal';
+    document.getElementById('focalId').value = '';
+    document.getElementById('focalName').value = '';
+    document.getElementById('focalPhone').value = '';
+    modal.show();
+}
+
+function showEditModal(id) {
+    const focal = focals.find(f => f.id === id);
+    document.getElementById('modalTitle').textContent = 'Edit Focal';
+    document.getElementById('focalId').value = focal.id;
+    document.getElementById('focalName').value = focal.name;
+    document.getElementById('focalPhone').value = focal.phone || '';
+    modal.show();
+}
+
+async function saveFocal() {
+    const id = document.getElementById('focalId').value;
+    const data = {
+        name: document.getElementById('focalName').value,
+        phone: document.getElementById('focalPhone').value || null
+    };
+
+    const url = id ? `/focals/${id}` : '/focals';
+    const method = id ? 'PUT' : 'POST';
+
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            modal.hide();
+            loadFocals();
+            showToast(id ? 'Focal updated' : 'Focal created', 'success');
+        } else {
+            const error = await response.json();
+            showToast(error.detail || 'Failed to save focal', 'danger');
+        }
+    } catch (error) {
+        showToast('Error saving focal', 'danger');
+    }
+}
+
+async function deleteFocal(id) {
+    if (!confirm('Are you sure you want to delete this focal?')) return;
+
+    try {
+        const response = await fetch(`/focals/${id}`, { method: 'DELETE' });
+
+        if (response.ok) {
+            loadFocals();
+            showToast('Focal deleted', 'success');
+        } else {
+            const error = await response.json();
+            showToast(error.detail || 'Failed to delete focal', 'danger');
+        }
+    } catch (error) {
+        showToast('Error deleting focal', 'danger');
+    }
+}
+</script>
+{% endblock %}

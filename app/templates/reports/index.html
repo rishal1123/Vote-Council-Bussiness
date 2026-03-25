@@ -1,0 +1,444 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - VoteCouncil{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+    .stat-card {
+        text-align: center;
+    }
+    .stat-card h2 {
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-bar-chart"></i> Reports & Analytics
+        </h1>
+        <button class="btn btn-outline-primary" onclick="loadAllData()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card stat-card bg-primary text-white">
+                <div class="card-body">
+                    <h6>Total Voters</h6>
+                    <h2 id="totalVoters">-</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card stat-card bg-success text-white">
+                <div class="card-body">
+                    <h6>Total Voted</h6>
+                    <h2 id="totalVoted">-</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card stat-card bg-warning">
+                <div class="card-body">
+                    <h6>Remaining</h6>
+                    <h2 id="totalRemaining">-</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card stat-card bg-info text-white">
+                <div class="card-body">
+                    <h6>Turnout Rate</h6>
+                    <h2 id="turnoutRate">-</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Vote Status Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="voteStatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Pledged vs Non-Pledged</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="pledgedChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Gender Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="genderChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Age Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="ageChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pledged Performance -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-graph-up"></i> Pledged Voter Performance</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="chart-container">
+                        <canvas id="pledgedPerformanceChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="row g-3" id="pledgedStats">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Box Performance Table -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-box"></i> Performance by Box</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Box</th>
+                            <th class="text-center">Total</th>
+                            <th class="text-center">Voted Pledged</th>
+                            <th class="text-center">Voted Other</th>
+                            <th class="text-center">Not Voted</th>
+                            <th class="text-center">Turnout</th>
+                            <th>Progress</th>
+                        </tr>
+                    </thead>
+                    <tbody id="boxTable">
+                        <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Focal Performance Table -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-person-badge"></i> Performance by Focal</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Focal</th>
+                            <th class="text-center">Total</th>
+                            <th class="text-center">Voted Pledged</th>
+                            <th class="text-center">Voted Other</th>
+                            <th class="text-center">Not Voted</th>
+                            <th class="text-center">Turnout</th>
+                            <th>Progress</th>
+                        </tr>
+                    </thead>
+                    <tbody id="focalTable">
+                        <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let charts = {};
+
+document.addEventListener('DOMContentLoaded', loadAllData);
+
+async function loadAllData() {
+    await Promise.all([
+        loadOverview(),
+        loadBoxData(),
+        loadFocalData(),
+        loadPledgedPerformance()
+    ]);
+}
+
+async function loadOverview() {
+    const response = await fetch('/reports/data/overview');
+    const data = await response.json();
+
+    // Update summary cards
+    document.getElementById('totalVoters').textContent = data.totals.total_voters.toLocaleString();
+    document.getElementById('totalVoted').textContent = data.totals.total_voted.toLocaleString();
+    document.getElementById('totalRemaining').textContent = data.totals.total_remaining.toLocaleString();
+    const turnout = data.totals.total_voters > 0
+        ? Math.round(data.totals.total_voted / data.totals.total_voters * 100)
+        : 0;
+    document.getElementById('turnoutRate').textContent = turnout + '%';
+
+    // Vote Status Chart
+    createPieChart('voteStatusChart', {
+        labels: ['Not Voted', 'Voted Pledged', 'Voted Other', 'Undecided'],
+        data: [
+            data.vote_status.not_voted,
+            data.vote_status.voted_pledged,
+            data.vote_status.voted_other,
+            data.vote_status.undecided
+        ],
+        colors: ['#6c757d', '#198754', '#dc3545', '#ffc107']
+    });
+
+    // Pledged Chart
+    createPieChart('pledgedChart', {
+        labels: ['Pledged', 'Not Pledged'],
+        data: [data.pledged.pledged, data.pledged.not_pledged],
+        colors: ['#0d6efd', '#adb5bd']
+    });
+
+    // Gender Chart
+    createPieChart('genderChart', {
+        labels: Object.keys(data.gender),
+        data: Object.values(data.gender),
+        colors: ['#0dcaf0', '#d63384', '#6c757d', '#20c997']
+    });
+
+    // Age Chart (Bar)
+    createBarChart('ageChart', {
+        labels: Object.keys(data.age),
+        data: Object.values(data.age)
+    });
+}
+
+async function loadPledgedPerformance() {
+    const response = await fetch('/reports/data/pledged-performance');
+    const data = await response.json();
+
+    // Pledged Performance Chart
+    createPieChart('pledgedPerformanceChart', {
+        labels: ['Voted as Pledged', 'Voted Other', 'Undecided', 'Not Voted'],
+        data: [data.voted_as_pledged, data.voted_other, data.undecided, data.not_voted],
+        colors: ['#198754', '#dc3545', '#ffc107', '#6c757d']
+    });
+
+    // Stats cards
+    document.getElementById('pledgedStats').innerHTML = `
+        <div class="col-md-4">
+            <div class="border rounded p-3 text-center">
+                <h3 class="text-primary">${data.total_pledged}</h3>
+                <small class="text-muted">Total Pledged Voters</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="border rounded p-3 text-center">
+                <h3 class="text-success">${data.conversion_rate}%</h3>
+                <small class="text-muted">Conversion Rate</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="border rounded p-3 text-center">
+                <h3 class="text-info">${data.turnout_rate}%</h3>
+                <small class="text-muted">Pledged Turnout</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="alert alert-success mb-0 text-center">
+                <strong>${data.voted_as_pledged}</strong><br>
+                <small>Voted as Pledged</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="alert alert-danger mb-0 text-center">
+                <strong>${data.voted_other}</strong><br>
+                <small>Voted Other</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="alert alert-warning mb-0 text-center">
+                <strong>${data.undecided}</strong><br>
+                <small>Undecided</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="alert alert-secondary mb-0 text-center">
+                <strong>${data.not_voted}</strong><br>
+                <small>Not Voted</small>
+            </div>
+        </div>
+    `;
+}
+
+async function loadBoxData() {
+    const response = await fetch('/reports/data/by-box');
+    const data = await response.json();
+
+    if (data.length === 0) {
+        document.getElementById('boxTable').innerHTML = '<tr><td colspan="7" class="text-center">No data</td></tr>';
+        return;
+    }
+
+    document.getElementById('boxTable').innerHTML = data.map(box => `
+        <tr>
+            <td><strong>${box.name}</strong></td>
+            <td class="text-center">${box.total}</td>
+            <td class="text-center text-success">${box.voted_pledged}</td>
+            <td class="text-center text-danger">${box.voted_other}</td>
+            <td class="text-center text-secondary">${box.not_voted}</td>
+            <td class="text-center"><span class="badge bg-${box.turnout_pct >= 75 ? 'success' : box.turnout_pct >= 50 ? 'warning' : 'secondary'}">${box.turnout_pct}%</span></td>
+            <td style="width: 150px;">
+                <div class="progress" style="height: 20px;">
+                    <div class="progress-bar bg-success" style="width: ${box.voted_pledged/box.total*100}%"></div>
+                    <div class="progress-bar bg-danger" style="width: ${box.voted_other/box.total*100}%"></div>
+                    <div class="progress-bar bg-warning" style="width: ${box.undecided/box.total*100}%"></div>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function loadFocalData() {
+    const response = await fetch('/reports/data/by-focal');
+    const data = await response.json();
+
+    if (data.length === 0) {
+        document.getElementById('focalTable').innerHTML = '<tr><td colspan="7" class="text-center">No data</td></tr>';
+        return;
+    }
+
+    document.getElementById('focalTable').innerHTML = data.map(focal => `
+        <tr>
+            <td><strong>${focal.name}</strong></td>
+            <td class="text-center">${focal.total}</td>
+            <td class="text-center text-success">${focal.voted_pledged}</td>
+            <td class="text-center text-danger">${focal.voted_other}</td>
+            <td class="text-center text-secondary">${focal.not_voted}</td>
+            <td class="text-center"><span class="badge bg-${focal.turnout_pct >= 75 ? 'success' : focal.turnout_pct >= 50 ? 'warning' : 'secondary'}">${focal.turnout_pct}%</span></td>
+            <td style="width: 150px;">
+                <div class="progress" style="height: 20px;">
+                    <div class="progress-bar bg-success" style="width: ${focal.voted_pledged/focal.total*100}%"></div>
+                    <div class="progress-bar bg-danger" style="width: ${focal.voted_other/focal.total*100}%"></div>
+                    <div class="progress-bar bg-warning" style="width: ${focal.undecided/focal.total*100}%"></div>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function createPieChart(canvasId, config) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+
+    if (charts[canvasId]) {
+        charts[canvasId].destroy();
+    }
+
+    charts[canvasId] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: config.labels,
+            datasets: [{
+                data: config.data,
+                backgroundColor: config.colors,
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function createBarChart(canvasId, config) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+
+    if (charts[canvasId]) {
+        charts[canvasId].destroy();
+    }
+
+    charts[canvasId] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: config.labels,
+            datasets: [{
+                data: config.data,
+                backgroundColor: '#0d6efd',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+// Auto-refresh every 60 seconds
+setInterval(loadAllData, 60000);
+</script>
+{% endblock %}

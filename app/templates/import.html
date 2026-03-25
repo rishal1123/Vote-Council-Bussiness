@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Import Data - VoteCouncil{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="h3 mb-4">
+        <i class="bi bi-upload"></i> Import Voters from Excel
+    </h1>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <form id="importForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="file" class="form-label">Excel File (.xlsx)</label>
+                            <input type="file" class="form-control" id="file" name="file" accept=".xlsx,.xls" required>
+                            <div class="form-text">Upload an Excel file containing voter data.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="importPhotos" checked>
+                                <label class="form-check-label" for="importPhotos">
+                                    Import embedded photos
+                                </label>
+                                <div class="form-text">Extract and import photos embedded in the Excel file.</div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" id="importBtn">
+                            <i class="bi bi-upload"></i> Import
+                        </button>
+                    </form>
+
+                    <div id="importProgress" class="d-none mt-4">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            <span>Importing voters... Please wait.</span>
+                        </div>
+                    </div>
+
+                    <div id="importResult" class="d-none mt-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Expected Excel Format</h5>
+                </div>
+                <div class="card-body">
+                    <p>The Excel file should contain the following columns:</p>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><strong>#</strong> or <strong>ID</strong></span>
+                            <span class="text-muted">Voter identifier</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><strong>Name</strong></span>
+                            <span class="text-muted">Full name (required)</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><strong>G</strong> or <strong>Gender</strong></span>
+                            <span class="text-muted">M/F</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><strong>Age</strong></span>
+                            <span class="text-muted">Number</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><strong>Contact</strong></span>
+                            <span class="text-muted">Phone number</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><strong>Registered Box</strong></span>
+                            <span class="text-muted">Box name (auto-created)</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><strong>Focal</strong></span>
+                            <span class="text-muted">Comma-separated names</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><strong>Pledged</strong></span>
+                            <span class="text-muted">Y/N</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><strong>Photo</strong></span>
+                            <span class="text-muted">Embedded images</span>
+                        </li>
+                    </ul>
+                    <div class="mt-3 p-3 bg-light rounded">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Photos can be embedded directly in Excel cells.
+                            They will be automatically extracted and linked to voters based on row position.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('importForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const fileInput = document.getElementById('file');
+    if (!fileInput.files[0]) {
+        showToast('Please select a file', 'warning');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    const importPhotos = document.getElementById('importPhotos').checked;
+
+    // Show progress
+    document.getElementById('importBtn').disabled = true;
+    document.getElementById('importProgress').classList.remove('d-none');
+    document.getElementById('importResult').classList.add('d-none');
+
+    try {
+        const response = await fetch(`/import/excel?import_photos=${importPhotos}`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        // Show result
+        document.getElementById('importProgress').classList.add('d-none');
+        const resultDiv = document.getElementById('importResult');
+        resultDiv.classList.remove('d-none');
+
+        if (response.ok) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <h5><i class="bi bi-check-circle"></i> Import Complete</h5>
+                    <hr>
+                    <div class="row">
+                        <div class="col-6">
+                            <p class="mb-1"><strong>Total rows:</strong> ${result.total_rows}</p>
+                            <p class="mb-1"><strong>Imported:</strong> ${result.imported}</p>
+                            <p class="mb-1"><strong>Skipped:</strong> ${result.skipped}</p>
+                        </div>
+                        <div class="col-6">
+                            <p class="mb-1"><strong>Boxes created:</strong> ${result.boxes_created}</p>
+                            <p class="mb-1"><strong>Focals created:</strong> ${result.focals_created}</p>
+                            <p class="mb-1"><strong>Photos imported:</strong> ${result.photos_imported || 0}</p>
+                        </div>
+                    </div>
+                    ${result.errors.length > 0 ? `
+                        <hr>
+                        <details>
+                            <summary>Errors (${result.errors.length})</summary>
+                            <ul class="mt-2">
+                                ${result.errors.slice(0, 20).map(e => `<li>${e}</li>`).join('')}
+                                ${result.errors.length > 20 ? `<li>... and ${result.errors.length - 20} more</li>` : ''}
+                            </ul>
+                        </details>
+                    ` : ''}
+                </div>
+                <a href="/voters/list" class="btn btn-primary">View Voters</a>
+            `;
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <h5><i class="bi bi-x-circle"></i> Import Failed</h5>
+                    <p>${result.detail || 'Unknown error occurred'}</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        document.getElementById('importProgress').classList.add('d-none');
+        document.getElementById('importResult').classList.remove('d-none');
+        document.getElementById('importResult').innerHTML = `
+            <div class="alert alert-danger">
+                <h5><i class="bi bi-x-circle"></i> Error</h5>
+                <p>Failed to upload file. Please try again.</p>
+            </div>
+        `;
+    }
+
+    document.getElementById('importBtn').disabled = false;
+});
+</script>
+{% endblock %}

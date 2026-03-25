@@ -1,0 +1,221 @@
+/* VoteCouncil Custom Styles */
+
+/* Global */
+body {
+    min-height: 100vh;
+    background-color: #f8f9fa;
+}
+
+/* Navbar */
+.navbar-brand {
+    font-weight: 600;
+}
+
+.navbar .nav-link {
+    padding: 0.5rem 1rem;
+}
+
+.navbar .badge {
+    font-size: 0.7rem;
+    vertical-align: middle;
+}
+
+/* Cards */
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: none;
+}
+
+.card-header {
+    background-color: white;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Tables */
+.table th {
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+/* Badges */
+.badge {
+    font-weight: 500;
+}
+
+/* Forms */
+.form-control:focus,
+.form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+/* Buttons */
+.btn {
+    font-weight: 500;
+}
+
+/* Progress bars */
+.progress {
+    background-color: #e9ecef;
+}
+
+/* Stats cards */
+.card.bg-primary,
+.card.bg-success,
+.card.bg-warning,
+.card.bg-info {
+    border: none;
+}
+
+.card.bg-primary .card-body,
+.card.bg-success .card-body,
+.card.bg-info .card-body {
+    color: white;
+}
+
+/* Login page */
+.min-vh-100 {
+    min-height: 100vh !important;
+}
+
+/* Toast notifications */
+.toast-container {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 1100;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+
+    .table {
+        font-size: 0.875rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    /* Dashboard cards mobile */
+    .card h2 {
+        font-size: 1.5rem;
+    }
+
+    /* Hide some columns on mobile */
+    .table .d-none-mobile {
+        display: none !important;
+    }
+}
+
+/* Print styles */
+@media print {
+    .navbar,
+    .btn,
+    .no-print {
+        display: none !important;
+    }
+
+    .card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+}
+
+/* PWA install prompt */
+#installPrompt {
+    position: fixed;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1050;
+    max-width: calc(100% - 2rem);
+}
+
+/* Sticky table headers */
+.table-responsive .table thead {
+    position: sticky;
+    top: 0;
+    background-color: white;
+    z-index: 1;
+}
+
+/* Vote status colors */
+.status-not-voted { color: #6c757d; }
+.status-voted-pledged { color: #198754; }
+.status-voted-other { color: #dc3545; }
+.status-undecided { color: #ffc107; }
+
+/* Loading spinner */
+.spinner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+/* Pagination */
+.pagination {
+    margin-bottom: 0;
+}
+
+.page-link {
+    padding: 0.375rem 0.75rem;
+}
+
+/* Dropdown improvements */
+.dropdown-menu {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border: none;
+}
+
+.dropdown-item:active {
+    background-color: #0d6efd;
+}
+
+/* Photo upload */
+.photo-preview {
+    max-width: 200px;
+    max-height: 200px;
+    object-fit: cover;
+}
+
+/* Scrollable lists */
+.scrollable-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Quick action buttons */
+.quick-actions .btn {
+    margin-bottom: 0.5rem;
+}
+
+/* Filter panel */
+.filter-panel {
+    background-color: white;
+    border-radius: 0.375rem;
+    padding: 1rem;
+}

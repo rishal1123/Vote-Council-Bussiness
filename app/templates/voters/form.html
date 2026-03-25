@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if voter else 'New' }} Voter - VoteCouncil{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="mb-4">
+        <a href="{% if voter %}/voters/{{ voter.id }}/view{% else %}/voters/list{% endif %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-person{% if not voter %}-plus{% endif %}"></i>
+                {{ 'Edit' if voter else 'New' }} Voter
+            </h5>
+        </div>
+        <div class="card-body">
+            <form id="voterForm">
+                <div class="row">
+                    <!-- Basic Info -->
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Basic Information</h6>
+
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Name *</label>
+                            <input type="text" class="form-control" id="name" name="name" required
+                                   value="{{ voter.name if voter else '' }}">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="voter_id" class="form-label">Voter ID</label>
+                                <input type="text" class="form-control" id="voter_id" name="voter_id"
+                                       value="{{ voter.voter_id if voter else '' }}">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="gender" class="form-label">Gender</label>
+                                <select class="form-select" id="gender" name="gender">
+                                    <option value="">-</option>
+                                    <option value="M" {{ 'selected' if voter and voter.gender == 'M' else '' }}>Male</option>
+                                    <option value="F" {{ 'selected' if voter and voter.gender == 'F' else '' }}>Female</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="age" class="form-label">Age</label>
+                                <input type="number" class="form-control" id="age" name="age"
+                                       value="{{ voter.age if voter else '' }}">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="party" class="form-label">Party</label>
+                            <input type="text" class="form-control" id="party" name="party"
+                                   value="{{ voter.party if voter else '' }}">
+                        </div>
+                    </div>
+
+                    <!-- Contact Info -->
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Contact & Location</h6>
+
+                        <div class="mb-3">
+                            <label for="contact" class="form-label">Contact</label>
+                            <input type="text" class="form-control" id="contact" name="contact"
+                                   value="{{ voter.contact if voter else '' }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="new_contact" class="form-label">New Contact</label>
+                            <input type="text" class="form-control" id="new_contact" name="new_contact"
+                                   value="{{ voter.new_contact if voter else '' }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Address</label>
+                            <input type="text" class="form-control" id="address" name="address"
+                                   value="{{ voter.address if voter else '' }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="current_location" class="form-label">Current Location</label>
+                            <input type="text" class="form-control" id="current_location" name="current_location"
+                                   value="{{ voter.current_location if voter else '' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="row">
+                    <!-- Assignment -->
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Assignment</h6>
+
+                        <div class="mb-3">
+                            <label for="box_id" class="form-label">Box</label>
+                            <select class="form-select" id="box_id" name="box_id">
+                                <option value="">Select Box</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="zone" class="form-label">Zone</label>
+                            <input type="text" class="form-control" id="zone" name="zone"
+                                   value="{{ voter.zone if voter else '' }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Focals</label>
+                            <div id="focalCheckboxes" class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status & Notes -->
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Status & Notes</h6>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="is_pledged" name="is_pledged"
+                                       {{ 'checked' if voter and voter.is_pledged else '' }}>
+                                <label class="form-check-label" for="is_pledged">
+                                    <strong>Pledged Voter</strong>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="focal_comment" class="form-label">Focal Comment</label>
+                            <textarea class="form-control" id="focal_comment" name="focal_comment" rows="3">{{ voter.focal_comment if voter else '' }}</textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="previous_island" class="form-label">Previous Island</label>
+                                <input type="text" class="form-control" id="previous_island" name="previous_island"
+                                       value="{{ voter.previous_island if voter else '' }}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="previous_address" class="form-label">Previous Address</label>
+                                <input type="text" class="form-control" id="previous_address" name="previous_address"
+                                       value="{{ voter.previous_address if voter else '' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% if voter %}/voters/{{ voter.id }}/view{% else %}/voters/list{% endif %}" class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> {{ 'Save Changes' if voter else 'Create Voter' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const voterId = {{ voter.id if voter else 'null' }};
+const voterFocalIds = {{ voter.focals | map(attribute='id') | list if voter else [] }};
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadBoxes();
+    await loadFocals();
+});
+
+async function loadBoxes() {
+    const response = await fetch('/boxes');
+    const boxes = await response.json();
+    const select = document.getElementById('box_id');
+
+    boxes.forEach(box => {
+        const option = document.createElement('option');
+        option.value = box.id;
+        option.textContent = box.name;
+        if (voterId && {{ voter.box_id if voter else 'null' }} === box.id) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
+}
+
+async function loadFocals() {
+    const response = await fetch('/focals');
+    const focals = await response.json();
+    const container = document.getElementById('focalCheckboxes');
+
+    container.innerHTML = focals.map(focal => `
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input focal-checkbox" id="focal_${focal.id}"
+                   value="${focal.id}" ${voterFocalIds.includes(focal.id) ? 'checked' : ''}>
+            <label class="form-check-label" for="focal_${focal.id}">${focal.name}</label>
+        </div>
+    `).join('');
+}
+
+document.getElementById('voterForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+    const data = {
+        name: formData.get('name'),
+        voter_id: formData.get('voter_id') || null,
+        gender: formData.get('gender') || null,
+        age: formData.get('age') ? parseInt(formData.get('age')) : null,
+        party: formData.get('party') || null,
+        contact: formData.get('contact') || null,
+        new_contact: formData.get('new_contact') || null,
+        address: formData.get('address') || null,
+        current_location: formData.get('current_location') || null,
+        previous_island: formData.get('previous_island') || null,
+        previous_address: formData.get('previous_address') || null,
+        zone: formData.get('zone') || null,
+        focal_comment: formData.get('focal_comment') || null,
+        box_id: formData.get('box_id') ? parseInt(formData.get('box_id')) : null,
+        is_pledged: formData.get('is_pledged') === 'on',
+        focal_ids: Array.from(document.querySelectorAll('.focal-checkbox:checked')).map(cb => parseInt(cb.value))
+    };
+
+    try {
+        const url = voterId ? `/voters/${voterId}` : '/voters';
+        const method = voterId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            const voter = await response.json();
+            showToast(voterId ? 'Voter updated' : 'Voter created', 'success');
+            window.location.href = `/voters/${voter.id}/view`;
+        } else {
+            const error = await response.json();
+            showToast(error.detail || 'Failed to save voter', 'danger');
+        }
+    } catch (error) {
+        showToast('Error saving voter', 'danger');
+    }
+});
+</script>
+{% endblock %}
