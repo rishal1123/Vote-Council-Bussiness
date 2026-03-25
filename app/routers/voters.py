@@ -517,9 +517,9 @@ async def update_vote_status(
     voter_id: int,
     status_data: VoterStatusUpdate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user_required)
+    user: User = Depends(require_role(UserRole.admin, UserRole.operator))
 ):
-    """Quick update of vote status (voting day feature)."""
+    """Quick update of vote status (admin/operator only)."""
     voter = db.query(Voter).filter(Voter.id == voter_id).first()
     if not voter:
         raise HTTPException(status_code=404, detail="Voter not found")

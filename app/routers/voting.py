@@ -10,7 +10,8 @@ from datetime import datetime
 from app.database import get_db
 from app.models import User, Voter, Box, Candidate
 from app.models.voter import VoteStatus
-from app.services.auth import get_current_user_required
+from app.models.user import UserRole
+from app.services.auth import get_current_user_required, require_role
 from app.services.logging import log_activity, Actions
 
 router = APIRouter(prefix="/voting", tags=["Voting Day"])
@@ -25,9 +26,9 @@ class VoteMarkRequest(BaseModel):
 @router.get("", response_class=HTMLResponse)
 async def voting_page(
     request: Request,
-    user: User = Depends(get_current_user_required)
+    user: User = Depends(require_role(UserRole.admin, UserRole.operator))
 ):
-    """Render the voting day mark page."""
+    """Render the voting day mark page (admin/operator only)."""
     return templates.TemplateResponse(
         "voting/mark.html",
         {"request": request, "user": user}
@@ -38,7 +39,7 @@ async def voting_page(
 async def search_voters_by_box(
     q: str = Query(..., min_length=1),
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user_required)
+    user: User = Depends(require_role(UserRole.admin, UserRole.operator))
 ):
     """Search for voters by Box# number."""
     query = q.strip()
@@ -77,9 +78,9 @@ async def mark_vote(
     data: VoteMarkRequest,
     request: Request,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user_required)
+    user: User = Depends(require_role(UserRole.admin, UserRole.operator))
 ):
-    """Mark a voter's vote status."""
+    """Mark a voter's vote status (admin/operator only)."""
     voter = db.query(Voter).filter(Voter.id == voter_id).first()
     if not voter:
         raise HTTPException(status_code=404, detail="Voter not found")
