@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
-from app.models.voter import VoteStatus
+from app.models.voter import VoteStatus, PledgeStatus
 
 
 class VoterBase(BaseModel):
@@ -18,7 +18,7 @@ class VoterBase(BaseModel):
     current_location: Optional[str] = None
     zone: Optional[str] = None
     focal_comment: Optional[str] = None
-    is_pledged: bool = False
+    is_pledged: PledgeStatus = PledgeStatus.no
 
 
 class VoterCreate(VoterBase):
@@ -40,7 +40,7 @@ class VoterUpdate(BaseModel):
     current_location: Optional[str] = None
     zone: Optional[str] = None
     focal_comment: Optional[str] = None
-    is_pledged: Optional[bool] = None
+    is_pledged: Optional[PledgeStatus] = None
     box_id: Optional[int] = None
     focal_ids: Optional[List[int]] = None
 
@@ -86,7 +86,7 @@ class VoterListResponse(BaseModel):
     name: str
     voter_id: Optional[str] = None
     box: Optional[BoxBrief] = None
-    is_pledged: bool
+    is_pledged: PledgeStatus
     vote_status: VoteStatus
     contact: Optional[str] = None
     focals: List[FocalBrief] = []

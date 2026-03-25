@@ -154,7 +154,7 @@ async def get_focal_voters(
             "id": voter.id,
             "name": voter.name,
             "voter_id": voter.voter_id,
-            "is_pledged": voter.is_pledged,
+            "is_pledged": voter.is_pledged.value if voter.is_pledged else "no",
             "vote_status": voter.vote_status.value,
             "box": {"id": voter.box.id, "name": voter.box.name} if voter.box else None
         })

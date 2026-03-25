@@ -9,6 +9,7 @@ import uuid
 from PIL import Image
 
 from app.models import Box, Focal, Voter
+from app.models.voter import PledgeStatus
 
 
 def extract_images_from_excel(file_content: bytes) -> Dict[int, str]:
@@ -250,16 +251,22 @@ def import_voters_from_excel(
                     voter_focals.append(focal_cache[focal_key])
 
             # Determine pledged status from parsed sub-columns
-            is_pledged = False
-            pledged_status = row.get('_pledged_status')
-            if pledged_status:
-                is_pledged = pledged_status == 'yes'
+            pledge_status = PledgeStatus.no
+            pledged_raw = row.get('_pledged_status')
+            if pledged_raw:
+                if pledged_raw == 'yes':
+                    pledge_status = PledgeStatus.yes
+                elif pledged_raw == 'undecided':
+                    pledge_status = PledgeStatus.undecided
+                else:
+                    pledge_status = PledgeStatus.no
             else:
                 # Fallback: single-column pledged field
                 pledged_val = row.get("Pledged") or row.get("pledged")
                 if pledged_val:
                     pledged_str = str(pledged_val).upper().strip()
-                    is_pledged = pledged_str in ("Y", "YES", "TRUE", "1")
+                    if pledged_str in ("Y", "YES", "TRUE", "1"):
+                        pledge_status = PledgeStatus.yes
 
             # Check for photo from embedded images
             photo_path = None
@@ -294,7 +301,7 @@ def import_voters_from_excel(
                 focal_comment=str(row.get("Focal Comment") or "").strip() or None,
                 remarks=remarks,
                 box=box,
-                is_pledged=is_pledged,
+                is_pledged=pledge_status,
                 focals=voter_focals,
                 photo_path=photo_path
             )

@@ -9,7 +9,7 @@ from sqlalchemy import func
 
 from app.database import get_db
 from app.models import User, Voter, Box, Focal
-from app.models.voter import VoteStatus
+from app.models.voter import VoteStatus, PledgeStatus
 from app.services.auth import get_current_user_required
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
@@ -50,8 +50,8 @@ async def get_overview_data(
         vote_status_data[status.value] = count
 
     # Pledged vs non-pledged
-    pledged_count = db.query(Voter).filter(Voter.is_pledged == True).count()
-    non_pledged_count = db.query(Voter).filter(Voter.is_pledged == False).count()
+    pledged_count = db.query(Voter).filter(Voter.is_pledged == PledgeStatus.yes).count()
+    non_pledged_count = db.query(Voter).filter(Voter.is_pledged != PledgeStatus.yes).count()
 
     # Gender breakdown
     gender_counts = db.query(
@@ -125,7 +125,7 @@ async def get_box_report(
         voted_other = voters.filter(Voter.vote_status == VoteStatus.voted_other).count()
         undecided = voters.filter(Voter.vote_status == VoteStatus.undecided).count()
         not_voted = voters.filter(Voter.vote_status == VoteStatus.not_voted).count()
-        pledged_voters = voters.filter(Voter.is_pledged == True).count()
+        pledged_voters = voters.filter(Voter.is_pledged == PledgeStatus.yes).count()
 
         data.append({
             "id": box.id,
@@ -166,7 +166,7 @@ async def get_focal_report(
         voted_other = sum(1 for v in voters if v.vote_status == VoteStatus.voted_other)
         undecided = sum(1 for v in voters if v.vote_status == VoteStatus.undecided)
         not_voted = sum(1 for v in voters if v.vote_status == VoteStatus.not_voted)
-        pledged_voters = sum(1 for v in voters if v.is_pledged)
+        pledged_voters = sum(1 for v in voters if v.is_pledged == PledgeStatus.yes)
 
         data.append({
             "id": focal.id,
@@ -193,7 +193,7 @@ async def get_pledged_performance(
     user: User = Depends(get_current_user_required)
 ):
     """Get performance metrics for pledged voters."""
-    pledged_voters = db.query(Voter).filter(Voter.is_pledged == True)
+    pledged_voters = db.query(Voter).filter(Voter.is_pledged == PledgeStatus.yes)
     total_pledged = pledged_voters.count()
 
     if total_pledged == 0:
@@ -249,7 +249,7 @@ async def export_voters_csv(
             v.current_location or "",
             v.box.name if v.box else "", v.box_number or "",
             v.zone or "", focals, v.focal_comment or "", v.remarks or "",
-            "Yes" if v.is_pledged else "No",
+            v.is_pledged.value.title() if v.is_pledged else "No",
             v.vote_status.value.replace("_", " ").title(),
             v.voted_for or ""
         ])
@@ -284,7 +284,7 @@ async def export_votes_csv(
             v.ec_number or "", v.voter_id or "", v.national_id or "",
             v.name, v.gender or "", v.age or "",
             v.box.name if v.box else "", v.box_number or "",
-            "Yes" if v.is_pledged else "No",
+            v.is_pledged.value.title() if v.is_pledged else "No",
             v.vote_status.value.replace("_", " ").title(),
             v.voted_for or "", focals
         ])

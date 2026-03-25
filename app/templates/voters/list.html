@@ -54,8 +54,9 @@
                 <div class="col-md-2">
                     <select class="form-select" id="pledgedFilter" name="is_pledged">
                         <option value="">All Voters</option>
-                        <option value="true">Pledged Only</option>
-                        <option value="false">Not Pledged</option>
+                        <option value="yes">Pledged</option>
+                        <option value="no">Not Pledged</option>
+                        <option value="undecided">Undecided</option>
                     </select>
                 </div>
             </form>
@@ -236,7 +237,7 @@ function renderVoters(voters) {
                 ${voter.focals.map(f => `<span class="badge bg-light text-dark">${f.name}</span>`).join(' ')}
             </td>
             <td class="text-center">
-                ${voter.is_pledged ? '<i class="bi bi-check-circle-fill text-success"></i>' : '<i class="bi bi-dash text-muted"></i>'}
+                ${voter.is_pledged === 'yes' ? '<i class="bi bi-check-circle-fill text-success"></i>' : voter.is_pledged === 'undecided' ? '<i class="bi bi-question-circle-fill text-warning"></i>' : '<i class="bi bi-dash text-muted"></i>'}
             </td>
             <td class="text-center">
                 ${getStatusBadge(voter.vote_status)}

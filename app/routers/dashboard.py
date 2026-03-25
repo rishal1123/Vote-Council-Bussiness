@@ -6,7 +6,7 @@ from sqlalchemy import func
 
 from app.database import get_db
 from app.models import Voter, Box, Focal, Candidate, User
-from app.models.voter import VoteStatus
+from app.models.voter import VoteStatus, PledgeStatus
 from app.services.auth import get_current_user_required
 
 router = APIRouter(tags=["Dashboard"])
@@ -40,7 +40,7 @@ def get_dashboard_stats(db: Session) -> dict:
     """Calculate all dashboard statistics."""
     # Total counts
     total_voters = db.query(Voter).count()
-    total_pledged = db.query(Voter).filter(Voter.is_pledged == True).count()
+    total_pledged = db.query(Voter).filter(Voter.is_pledged == PledgeStatus.yes).count()
 
     # Vote status counts
     not_voted = db.query(Voter).filter(Voter.vote_status == VoteStatus.not_voted).count()

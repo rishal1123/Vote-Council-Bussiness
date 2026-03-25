@@ -60,7 +60,7 @@ async def search_voter(
         "gender": voter.gender,
         "age": voter.age,
         "photo_path": voter.photo_path,
-        "is_pledged": voter.is_pledged,
+        "is_pledged": voter.is_pledged.value if voter.is_pledged else "no",
         "vote_status": voter.vote_status.value,
         "voted_for": voter.voted_for,
         "contact": voter.contact,

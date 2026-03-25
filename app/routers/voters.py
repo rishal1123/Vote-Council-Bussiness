@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from app.database import get_db
 from app.models import Voter, Box, Focal, User
-from app.models.voter import VoteStatus
+from app.models.voter import VoteStatus, PledgeStatus
 from app.models.user import UserRole
 from app.schemas.voter import (
     VoterCreate, VoterUpdate, VoterResponse, VoterListResponse, VoterStatusUpdate
@@ -84,7 +84,7 @@ async def list_voters(
     box_id: Optional[int] = Query(None),
     focal_id: Optional[int] = Query(None),
     vote_status: Optional[VoteStatus] = Query(None),
-    is_pledged: Optional[bool] = Query(None),
+    is_pledged: Optional[str] = Query(None),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -115,7 +115,10 @@ async def list_voters(
         query = query.filter(Voter.vote_status == vote_status)
 
     if is_pledged is not None:
-        query = query.filter(Voter.is_pledged == is_pledged)
+        try:
+            query = query.filter(Voter.is_pledged == PledgeStatus(is_pledged))
+        except ValueError:
+            pass
 
     # Order and paginate
     voters = query.order_by(Voter.name).offset(offset).limit(limit).all()
@@ -141,7 +144,7 @@ async def count_voters(
     box_id: Optional[int] = Query(None),
     focal_id: Optional[int] = Query(None),
     vote_status: Optional[VoteStatus] = Query(None),
-    is_pledged: Optional[bool] = Query(None),
+    is_pledged: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user_required)
 ):
@@ -166,7 +169,10 @@ async def count_voters(
         query = query.filter(Voter.vote_status == vote_status)
 
     if is_pledged is not None:
-        query = query.filter(Voter.is_pledged == is_pledged)
+        try:
+            query = query.filter(Voter.is_pledged == PledgeStatus(is_pledged))
+        except ValueError:
+            pass
 
     return {"count": query.count()}
 

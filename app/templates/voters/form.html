@@ -121,13 +121,12 @@
                         <h6 class="text-muted mb-3">Status & Notes</h6>
 
                         <div class="mb-3">
-                            <div class="form-check">
-                                <input type="checkbox" class="form-check-input" id="is_pledged" name="is_pledged"
-                                       {{ 'checked' if voter and voter.is_pledged else '' }}>
-                                <label class="form-check-label" for="is_pledged">
-                                    <strong>Pledged Voter</strong>
-                                </label>
-                            </div>
+                            <label for="is_pledged" class="form-label"><strong>Pledge Status</strong></label>
+                            <select class="form-select" id="is_pledged" name="is_pledged">
+                                <option value="no" {{ 'selected' if not voter or voter.is_pledged.value == 'no' else '' }}>Not Pledged</option>
+                                <option value="yes" {{ 'selected' if voter and voter.is_pledged.value == 'yes' else '' }}>Pledged</option>
+                                <option value="undecided" {{ 'selected' if voter and voter.is_pledged.value == 'undecided' else '' }}>Undecided</option>
+                            </select>
                         </div>
 
                         <div class="mb-3">
@@ -225,7 +224,7 @@ document.getElementById('voterForm').addEventListener('submit', async (e) => {
         zone: formData.get('zone') || null,
         focal_comment: formData.get('focal_comment') || null,
         box_id: formData.get('box_id') ? parseInt(formData.get('box_id')) : null,
-        is_pledged: formData.get('is_pledged') === 'on',
+        is_pledged: formData.get('is_pledged') || 'no',
         focal_ids: Array.from(document.querySelectorAll('.focal-checkbox:checked')).map(cb => parseInt(cb.value))
     };
 

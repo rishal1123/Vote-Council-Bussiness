@@ -6,6 +6,12 @@ import enum
 from app.database import Base
 
 
+class PledgeStatus(str, enum.Enum):
+    yes = "yes"
+    no = "no"
+    undecided = "undecided"
+
+
 class VoteStatus(str, enum.Enum):
     not_voted = "not_voted"
     voted_pledged = "voted_pledged"
@@ -46,7 +52,7 @@ class Voter(Base):
 
     photo_path = Column(String(255), nullable=True)
     box_id = Column(Integer, ForeignKey("boxes.id"), nullable=True)
-    is_pledged = Column(Boolean, default=False)
+    is_pledged = Column(Enum(PledgeStatus), default=PledgeStatus.no)
     vote_status = Column(Enum(VoteStatus), default=VoteStatus.not_voted)
     voted_for = Column(String(100), nullable=True)  # Store name/info of who they voted for
     created_at = Column(DateTime, default=datetime.utcnow)

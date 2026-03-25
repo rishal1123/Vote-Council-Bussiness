@@ -35,8 +35,8 @@
                             </p>
                         </div>
                         <div class="col-md-6 text-md-end">
-                            <span class="badge {% if voter.is_pledged %}bg-success{% else %}bg-secondary{% endif %} fs-6">
-                                {% if voter.is_pledged %}Pledged{% else %}Not Pledged{% endif %}
+                            <span class="badge {% if voter.is_pledged.value == 'yes' %}bg-success{% elif voter.is_pledged.value == 'undecided' %}bg-warning{% else %}bg-secondary{% endif %} fs-6">
+                                {% if voter.is_pledged.value == 'yes' %}Pledged{% elif voter.is_pledged.value == 'undecided' %}Undecided{% else %}Not Pledged{% endif %}
                             </span>
                         </div>
                     </div>

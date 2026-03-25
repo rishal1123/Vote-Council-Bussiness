@@ -222,9 +222,12 @@ function displayVoter(voter) {
 
     // Pledged badge
     const pledgedBadge = document.getElementById('voterPledged');
-    if (voter.is_pledged) {
+    if (voter.is_pledged === 'yes') {
         pledgedBadge.className = 'badge bg-success';
         pledgedBadge.textContent = 'Pledged';
+    } else if (voter.is_pledged === 'undecided') {
+        pledgedBadge.className = 'badge bg-warning';
+        pledgedBadge.textContent = 'Undecided';
     } else {
         pledgedBadge.className = 'badge bg-secondary';
         pledgedBadge.textContent = 'Not Pledged';
