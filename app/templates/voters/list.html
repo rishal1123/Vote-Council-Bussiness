@@ -10,11 +10,16 @@
             <i class="bi bi-people"></i> Voters
             <span class="badge bg-secondary" id="voterCount">0</span>
         </h1>
-        {% if user.role.value in ['admin', 'operator'] %}
-        <a href="/voters/new" class="btn btn-primary">
-            <i class="bi bi-plus-lg"></i> Add Voter
-        </a>
-        {% endif %}
+        <div class="d-flex gap-2">
+            <a href="/reports/export/voters" class="btn btn-export">
+                <i class="bi bi-download"></i> Export CSV
+            </a>
+            {% if user.role.value in ['admin', 'operator'] %}
+            <a href="/voters/new" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> Add Voter
+            </a>
+            {% endif %}
+        </div>
     </div>
 
     <!-- Filters -->

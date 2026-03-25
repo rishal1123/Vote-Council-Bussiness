@@ -24,9 +24,17 @@
         <h1 class="h3 mb-0">
             <i class="bi bi-bar-chart"></i> Reports & Analytics
         </h1>
-        <button class="btn btn-outline-primary" onclick="loadAllData()">
-            <i class="bi bi-arrow-clockwise"></i> Refresh
-        </button>
+        <div class="d-flex gap-2">
+            <a href="/reports/export/voters" class="btn btn-export">
+                <i class="bi bi-download"></i> Export Voters CSV
+            </a>
+            <a href="/reports/export/votes" class="btn btn-export">
+                <i class="bi bi-download"></i> Export Votes CSV
+            </a>
+            <button class="btn btn-outline-primary" onclick="loadAllData()">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+        </div>
     </div>
 
     <!-- Summary Cards -->
@@ -236,21 +244,21 @@ async function loadOverview() {
             data.vote_status.voted_other,
             data.vote_status.undecided
         ],
-        colors: ['#6c757d', '#198754', '#dc3545', '#ffc107']
+        colors: ['#8D99AE', '#007E3A', '#D21034', '#F4A261']
     });
 
     // Pledged Chart
     createPieChart('pledgedChart', {
         labels: ['Pledged', 'Not Pledged'],
         data: [data.pledged.pledged, data.pledged.not_pledged],
-        colors: ['#0d6efd', '#adb5bd']
+        colors: ['#0077B6', '#8D99AE']
     });
 
     // Gender Chart
     createPieChart('genderChart', {
         labels: Object.keys(data.gender),
         data: Object.values(data.gender),
-        colors: ['#0dcaf0', '#d63384', '#6c757d', '#20c997']
+        colors: ['#0077B6', '#D21034', '#8D99AE', '#007E3A']
     });
 
     // Age Chart (Bar)
@@ -268,7 +276,7 @@ async function loadPledgedPerformance() {
     createPieChart('pledgedPerformanceChart', {
         labels: ['Voted as Pledged', 'Voted Other', 'Undecided', 'Not Voted'],
         data: [data.voted_as_pledged, data.voted_other, data.undecided, data.not_voted],
-        colors: ['#198754', '#dc3545', '#ffc107', '#6c757d']
+        colors: ['#007E3A', '#D21034', '#F4A261', '#8D99AE']
     });
 
     // Stats cards
@@ -417,7 +425,7 @@ function createBarChart(canvasId, config) {
             labels: config.labels,
             datasets: [{
                 data: config.data,
-                backgroundColor: '#0d6efd',
+                backgroundColor: '#0077B6',
                 borderRadius: 4
             }]
         },

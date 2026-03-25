@@ -12,6 +12,9 @@ services:
     environment:
       - DATABASE_URL=sqlite:///data/votecouncil.db
       - SECRET_KEY=change-this-in-production
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements.txt &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
     restart: unless-stopped
 
 volumes:

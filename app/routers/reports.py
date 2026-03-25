@@ -1,5 +1,8 @@
+import csv
+import io
+
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -216,3 +219,79 @@ async def get_pledged_performance(
         "conversion_rate": round(voted_pledged / total_pledged * 100, 1),
         "turnout_rate": round((total_pledged - not_voted) / total_pledged * 100, 1)
     }
+
+
+@router.get("/export/voters")
+async def export_voters_csv(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user_required)
+):
+    """Export all voters data as CSV."""
+    voters = db.query(Voter).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "EC#", "#", "ID", "Name", "Gender", "Age", "Party",
+        "Address", "Contact", "New Contact", "Previous Island",
+        "Previous Address", "Current Location", "Box", "Box#",
+        "Zone", "Focal(s)", "Focal Comment", "Remarks",
+        "Pledged", "Vote Status", "Voted For"
+    ])
+
+    for v in voters:
+        focals = ", ".join(f.name for f in v.focals) if v.focals else ""
+        writer.writerow([
+            v.ec_number or "", v.voter_id or "", v.national_id or "",
+            v.name, v.gender or "", v.age or "", v.party or "",
+            v.address or "", v.contact or "", v.new_contact or "",
+            v.previous_island or "", v.previous_address or "",
+            v.current_location or "",
+            v.box.name if v.box else "", v.box_number or "",
+            v.zone or "", focals, v.focal_comment or "", v.remarks or "",
+            "Yes" if v.is_pledged else "No",
+            v.vote_status.value.replace("_", " ").title(),
+            v.voted_for or ""
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=voters_export.csv"}
+    )
+
+
+@router.get("/export/votes")
+async def export_votes_csv(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user_required)
+):
+    """Export vote status data as CSV."""
+    voters = db.query(Voter).filter(Voter.vote_status != VoteStatus.not_voted).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "EC#", "#", "ID", "Name", "Gender", "Age",
+        "Box", "Box#", "Pledged", "Vote Status", "Voted For",
+        "Focal(s)"
+    ])
+
+    for v in voters:
+        focals = ", ".join(f.name for f in v.focals) if v.focals else ""
+        writer.writerow([
+            v.ec_number or "", v.voter_id or "", v.national_id or "",
+            v.name, v.gender or "", v.age or "",
+            v.box.name if v.box else "", v.box_number or "",
+            "Yes" if v.is_pledged else "No",
+            v.vote_status.value.replace("_", " ").title(),
+            v.voted_for or "", focals
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=votes_export.csv"}
+    )

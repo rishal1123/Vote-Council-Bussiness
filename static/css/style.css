@@ -1,18 +1,55 @@
-/* VoteCouncil Custom Styles */
+/* VoteCouncil Custom Styles - Maldivian Theme */
+
+/* Maldivian color palette:
+   --mv-red: #D21034 (Maldivian flag red)
+   --mv-green: #007E3A (Maldivian flag green)
+   --mv-white: #FFFFFF (Maldivian crescent)
+   --mv-ocean: #0077B6 (Indian Ocean blue)
+   --mv-ocean-light: #90E0EF (Lagoon turquoise)
+   --mv-sand: #F5E6CA (Beach sand)
+   --mv-dark: #1B2A4A (Deep ocean)
+*/
+
+:root {
+    --mv-red: #D21034;
+    --mv-green: #007E3A;
+    --mv-ocean: #0077B6;
+    --mv-ocean-dark: #005F8A;
+    --mv-ocean-light: #90E0EF;
+    --mv-lagoon: #00B4D8;
+    --mv-sand: #F5E6CA;
+    --mv-sand-light: #FDF8F0;
+    --mv-dark: #1B2A4A;
+    --mv-coral: #FF6B6B;
+}
 
 /* Global */
 body {
     min-height: 100vh;
-    background-color: #f8f9fa;
+    background-color: var(--mv-sand-light);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Navbar */
+/* Navbar - Maldivian deep ocean */
+.navbar {
+    background: linear-gradient(135deg, var(--mv-dark) 0%, var(--mv-ocean-dark) 100%) !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+}
+
 .navbar-brand {
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 
 .navbar .nav-link {
     padding: 0.5rem 1rem;
+    transition: background-color 0.2s;
+    border-radius: 6px;
+    margin: 0 2px;
+}
+
+.navbar .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 .navbar .badge {
@@ -20,15 +57,77 @@ body {
     vertical-align: middle;
 }
 
+/* Override Bootstrap primary with ocean blue */
+.btn-primary {
+    background-color: var(--mv-ocean);
+    border-color: var(--mv-ocean);
+}
+
+.btn-primary:hover, .btn-primary:focus {
+    background-color: var(--mv-ocean-dark);
+    border-color: var(--mv-ocean-dark);
+}
+
+.btn-outline-primary {
+    color: var(--mv-ocean);
+    border-color: var(--mv-ocean);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--mv-ocean);
+    border-color: var(--mv-ocean);
+    color: white;
+}
+
+.bg-primary {
+    background-color: var(--mv-ocean) !important;
+}
+
+.text-primary {
+    color: var(--mv-ocean) !important;
+}
+
+/* Success uses Maldivian green */
+.btn-success, .bg-success {
+    background-color: var(--mv-green) !important;
+    border-color: var(--mv-green) !important;
+}
+
+.btn-success:hover {
+    background-color: #006B31 !important;
+    border-color: #006B31 !important;
+}
+
+.text-success {
+    color: var(--mv-green) !important;
+}
+
+/* Danger uses Maldivian red */
+.btn-danger, .bg-danger {
+    background-color: var(--mv-red) !important;
+    border-color: var(--mv-red) !important;
+}
+
+.btn-danger:hover {
+    background-color: #B00E2C !important;
+    border-color: #B00E2C !important;
+}
+
+.text-danger {
+    color: var(--mv-red) !important;
+}
+
 /* Cards */
 .card {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    box-shadow: 0 2px 8px rgba(27, 42, 74, 0.08);
     border: none;
+    border-radius: 10px;
 }
 
 .card-header {
     background-color: white;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    border-bottom: 2px solid var(--mv-sand);
+    border-radius: 10px 10px 0 0 !important;
 }
 
 /* Tables */
@@ -37,41 +136,67 @@ body {
     font-size: 0.875rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #6c757d;
+    color: var(--mv-dark);
+    border-bottom-color: var(--mv-sand);
 }
 
 .table-hover tbody tr:hover {
-    background-color: rgba(13, 110, 253, 0.05);
+    background-color: rgba(0, 119, 182, 0.05);
+}
+
+.table-light {
+    background-color: var(--mv-sand-light) !important;
 }
 
 /* Badges */
 .badge {
     font-weight: 500;
+    border-radius: 6px;
+}
+
+.badge.bg-secondary {
+    background-color: #8D99AE !important;
 }
 
 /* Forms */
 .form-control:focus,
 .form-select:focus {
-    border-color: #0d6efd;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+    border-color: var(--mv-ocean);
+    box-shadow: 0 0 0 0.2rem rgba(0, 119, 182, 0.2);
 }
 
 /* Buttons */
 .btn {
     font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.2s;
 }
 
 /* Progress bars */
 .progress {
     background-color: #e9ecef;
+    border-radius: 6px;
 }
 
-/* Stats cards */
-.card.bg-primary,
-.card.bg-success,
-.card.bg-warning,
+/* Stats cards on dashboard/reports */
+.stat-card.bg-primary,
+.card.bg-primary {
+    background: linear-gradient(135deg, var(--mv-ocean) 0%, var(--mv-lagoon) 100%) !important;
+}
+
+.stat-card.bg-success,
+.card.bg-success {
+    background: linear-gradient(135deg, var(--mv-green) 0%, #00A64A 100%) !important;
+}
+
+.stat-card.bg-warning,
+.card.bg-warning {
+    background: linear-gradient(135deg, #F4A261 0%, #E9C46A 100%) !important;
+}
+
+.stat-card.bg-info,
 .card.bg-info {
-    border: none;
+    background: linear-gradient(135deg, var(--mv-lagoon) 0%, var(--mv-ocean-light) 100%) !important;
 }
 
 .card.bg-primary .card-body,
@@ -83,6 +208,10 @@ body {
 /* Login page */
 .min-vh-100 {
     min-height: 100vh !important;
+}
+
+.login-card {
+    border-top: 4px solid var(--mv-red);
 }
 
 /* Toast notifications */
@@ -157,10 +286,10 @@ body {
 }
 
 /* Vote status colors */
-.status-not-voted { color: #6c757d; }
-.status-voted-pledged { color: #198754; }
-.status-voted-other { color: #dc3545; }
-.status-undecided { color: #ffc107; }
+.status-not-voted { color: #8D99AE; }
+.status-voted-pledged { color: var(--mv-green); }
+.status-voted-other { color: var(--mv-red); }
+.status-undecided { color: #F4A261; }
 
 /* Loading spinner */
 .spinner-overlay {
@@ -183,16 +312,23 @@ body {
 
 .page-link {
     padding: 0.375rem 0.75rem;
+    color: var(--mv-ocean);
+}
+
+.page-item.active .page-link {
+    background-color: var(--mv-ocean);
+    border-color: var(--mv-ocean);
 }
 
 /* Dropdown improvements */
 .dropdown-menu {
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
     border: none;
+    border-radius: 8px;
 }
 
 .dropdown-item:active {
-    background-color: #0d6efd;
+    background-color: var(--mv-ocean);
 }
 
 /* Photo upload */
@@ -218,4 +354,33 @@ body {
     background-color: white;
     border-radius: 0.375rem;
     padding: 1rem;
+}
+
+/* Export buttons */
+.btn-export {
+    background-color: var(--mv-dark);
+    border-color: var(--mv-dark);
+    color: white;
+}
+
+.btn-export:hover {
+    background-color: #142038;
+    border-color: #142038;
+    color: white;
+}
+
+/* Links */
+a {
+    color: var(--mv-ocean);
+}
+
+a:hover {
+    color: var(--mv-ocean-dark);
+}
+
+/* Alert info */
+.alert-info {
+    background-color: rgba(0, 180, 216, 0.1);
+    border-color: var(--mv-lagoon);
+    color: var(--mv-dark);
 }
