@@ -5,7 +5,7 @@ services:
     build: .
     container_name: votecouncil
     ports:
-      - "8000:8000"
+      - "443:443"
     volumes:
       - db-data:/app/data
       - uploads:/app/uploads
@@ -14,7 +14,7 @@ services:
       - SECRET_KEY=change-this-in-production
     command: >
       sh -c "pip install --no-cache-dir -r requirements.txt &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4"
+             uvicorn app.main:app --host 0.0.0.0 --port 443 --workers 4"
     restart: unless-stopped
 
 volumes:
