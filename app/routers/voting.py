@@ -35,39 +35,40 @@ async def voting_page(
 
 
 @router.get("/search")
-async def search_voter(
+async def search_voters_by_box(
     q: str = Query(..., min_length=1),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user_required)
 ):
-    """Search for a voter by national ID number."""
+    """Search for voters by Box# number."""
     query = q.strip()
 
-    # Search by national_id only
-    voter = db.query(Voter).filter(Voter.national_id == query).first()
+    voters = db.query(Voter).filter(
+        Voter.box_number.ilike(f"%{query}%")
+    ).order_by(Voter.name).all()
 
-    if not voter:
-        raise HTTPException(status_code=404, detail="Voter not found")
+    if not voters:
+        raise HTTPException(status_code=404, detail="No voters found for this Box#")
 
-    # Get box name
-    box_name = None
-    if voter.box:
-        box_name = voter.box.name
-
-    return {
-        "id": voter.id,
-        "voter_id": voter.voter_id,
-        "name": voter.name,
-        "gender": voter.gender,
-        "age": voter.age,
-        "photo_path": voter.photo_path,
-        "is_pledged": voter.is_pledged.value if voter.is_pledged else "no",
-        "vote_status": voter.vote_status.value,
-        "voted_for": voter.voted_for,
-        "contact": voter.contact,
-        "new_contact": voter.new_contact,
-        "box_name": box_name
-    }
+    return [
+        {
+            "id": v.id,
+            "voter_id": v.voter_id,
+            "national_id": v.national_id,
+            "name": v.name,
+            "gender": v.gender,
+            "age": v.age,
+            "photo_path": v.photo_path,
+            "is_pledged": v.is_pledged.value if v.is_pledged else "no",
+            "vote_status": v.vote_status.value,
+            "voted_for": v.voted_for,
+            "contact": v.contact,
+            "new_contact": v.new_contact,
+            "box_name": v.box.name if v.box else None,
+            "box_number": v.box_number
+        }
+        for v in voters
+    ]
 
 
 @router.post("/mark/{voter_id}")

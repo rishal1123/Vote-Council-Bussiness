@@ -1,5 +1,7 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -22,6 +24,21 @@ async def import_page(
     return templates.TemplateResponse(
         "import.html",
         {"request": request, "user": user}
+    )
+
+
+@router.get("/sample")
+async def download_sample(
+    user: User = Depends(get_current_user_required)
+):
+    """Download sample Excel file."""
+    sample_path = os.path.join("Sample Data", "Sample Data.xlsx")
+    if not os.path.exists(sample_path):
+        raise HTTPException(status_code=404, detail="Sample file not found")
+    return FileResponse(
+        sample_path,
+        filename="VoteCouncil_Sample_Data.xlsx",
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
 

@@ -58,24 +58,45 @@
         <h1 class="h2">
             <i class="bi bi-check2-circle"></i> Vote Day - Mark Voters
         </h1>
-        <p class="text-muted">Search by ID number to mark voting status</p>
+        <p class="text-muted">Set Box prefix, then enter the number to find voters</p>
     </div>
 
     <!-- Search Section -->
     <div class="search-section mb-4">
         <div class="input-group input-group-lg">
-            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <span class="input-group-text"><i class="bi bi-box"></i></span>
+            <input type="text" class="form-control" id="boxPrefix" style="max-width: 120px;"
+                   placeholder="B2." value="B">
             <input type="text" class="form-control" id="searchInput"
-                   placeholder="Enter ID number..." autofocus>
-            <button class="btn btn-primary" type="button" onclick="searchVoter()">
-                Search
+                   placeholder="Number..." autofocus>
+            <button class="btn btn-primary" type="button" onclick="searchVoters()">
+                <i class="bi bi-search"></i> Search
             </button>
         </div>
-        <div class="form-text text-center">Press Enter to search</div>
+        <div class="form-text text-center">Set box prefix once (e.g. B2.), then enter number and press Enter</div>
     </div>
 
-    <!-- Voter Card (hidden until search) -->
+    <!-- Voter List (shown after box search) -->
+    <div id="voterListSection" class="d-none mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-people"></i> Voters in <span id="boxLabel"></span></h5>
+                <span class="badge bg-primary" id="voterListCount">0</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" id="voterList" style="max-height: 400px; overflow-y: auto;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voter Card (hidden until voter selected) -->
     <div id="voterSection" class="d-none">
+        <div class="mb-2">
+            <button class="btn btn-outline-secondary btn-sm" onclick="backToList()">
+                <i class="bi bi-arrow-left"></i> Back to list
+            </button>
+        </div>
         <div class="voter-card card shadow">
             <div class="card-body">
                 <div class="row">
@@ -146,8 +167,8 @@
     <!-- No Results Message -->
     <div id="noResults" class="d-none text-center py-5">
         <i class="bi bi-search" style="font-size: 3rem; color: #6c757d;"></i>
-        <h4 class="mt-3 text-muted">No voter found</h4>
-        <p class="text-muted">Try searching with a different ID number</p>
+        <h4 class="mt-3 text-muted">No voters found</h4>
+        <p class="text-muted">Try searching with a different Box# number</p>
     </div>
 </div>
 {% endblock %}
@@ -155,6 +176,7 @@
 {% block extra_js %}
 <script>
 let currentVoter = null;
+let currentVoterList = [];
 let selectedStatus = null;
 let selectedCandidate = null;
 let candidates = [];
@@ -165,30 +187,86 @@ document.addEventListener('DOMContentLoaded', async () => {
     const response = await fetch('/candidates');
     candidates = await response.json();
 
-    // Enter key to search
+    // Enter key to search on both inputs
     document.getElementById('searchInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') searchVoter();
+        if (e.key === 'Enter') searchVoters();
+    });
+    document.getElementById('boxPrefix').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            document.getElementById('searchInput').focus();
+        }
     });
 
-    // Focus search on page load
+    // Focus number input on page load
     document.getElementById('searchInput').focus();
 });
 
-async function searchVoter() {
-    const query = document.getElementById('searchInput').value.trim();
+async function searchVoters() {
+    const prefix = document.getElementById('boxPrefix').value.trim();
+    const number = document.getElementById('searchInput').value.trim();
+    const query = prefix + number;
     if (!query) return;
 
     try {
         const response = await fetch(`/voting/search?q=${encodeURIComponent(query)}`);
         if (response.ok) {
-            const voter = await response.json();
-            displayVoter(voter);
+            const voters = await response.json();
+            currentVoterList = voters;
+            displayVoterList(voters, query);
         } else {
             showNoResults();
         }
     } catch (error) {
-        showToast('Error searching for voter', 'danger');
+        showToast('Error searching for voters', 'danger');
     }
+}
+
+function displayVoterList(voters, boxQuery) {
+    document.getElementById('voterSection').classList.add('d-none');
+    document.getElementById('noResults').classList.add('d-none');
+    document.getElementById('voterListSection').classList.remove('d-none');
+
+    document.getElementById('boxLabel').textContent = boxQuery;
+    document.getElementById('voterListCount').textContent = voters.length;
+
+    const statusColors = {
+        'not_voted': 'secondary',
+        'voted_pledged': 'success',
+        'voted_other': 'danger',
+        'undecided': 'warning'
+    };
+
+    const list = document.getElementById('voterList');
+    list.innerHTML = voters.map(v => {
+        const statusColor = statusColors[v.vote_status] || 'secondary';
+        const statusLabel = v.vote_status.replace(/_/g, ' ');
+        const photo = v.photo_path
+            ? `<img src="/uploads/${v.photo_path}" class="rounded-circle me-2" style="width:36px;height:36px;object-fit:cover;">`
+            : `<span class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center me-2" style="width:36px;height:36px;"><i class="bi bi-person text-muted"></i></span>`;
+
+        return `
+            <button class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-2" onclick='selectVoterFromList(${v.id})'>
+                ${photo}
+                <div class="flex-grow-1">
+                    <div class="fw-bold">${escapeHtml(v.name)}</div>
+                    <small class="text-muted">${escapeHtml(v.national_id || '')} ${v.box_number ? '| ' + escapeHtml(v.box_number) : ''}</small>
+                </div>
+                <span class="badge bg-${statusColor}">${statusLabel}</span>
+            </button>
+        `;
+    }).join('');
+}
+
+function selectVoterFromList(voterId) {
+    const voter = currentVoterList.find(v => v.id === voterId);
+    if (voter) {
+        displayVoter(voter);
+    }
+}
+
+function backToList() {
+    document.getElementById('voterSection').classList.add('d-none');
+    document.getElementById('voterListSection').classList.remove('d-none');
 }
 
 function displayVoter(voter) {
@@ -196,6 +274,7 @@ function displayVoter(voter) {
     selectedStatus = null;
     selectedCandidate = null;
 
+    document.getElementById('voterListSection').classList.add('d-none');
     document.getElementById('voterSection').classList.remove('d-none');
     document.getElementById('noResults').classList.add('d-none');
 
@@ -382,10 +461,21 @@ async function confirmVote() {
             }
             addToRecentMarks(currentVoter, selectedStatus);
 
-            // Clear and focus search
-            document.getElementById('searchInput').value = '';
-            document.getElementById('searchInput').focus();
-            document.getElementById('voterSection').classList.add('d-none');
+            // Update voter in the list and go back
+            if (currentVoterList.length > 0) {
+                const idx = currentVoterList.findIndex(v => v.id === currentVoter.id);
+                if (idx >= 0) {
+                    currentVoterList[idx].vote_status = selectedStatus;
+                }
+                const prefix = document.getElementById('boxPrefix').value.trim();
+                const number = document.getElementById('searchInput').value.trim();
+                displayVoterList(currentVoterList, prefix + number);
+                document.getElementById('voterSection').classList.add('d-none');
+            } else {
+                document.getElementById('searchInput').value = '';
+                document.getElementById('searchInput').focus();
+                document.getElementById('voterSection').classList.add('d-none');
+            }
 
             // Update pending badge
             if (typeof updatePendingSyncBadge === 'function') {
@@ -398,10 +488,19 @@ async function confirmVote() {
         showToast('Saved offline - will sync when online', 'warning');
         addToRecentMarks(currentVoter, selectedStatus);
 
-        // Clear and focus search
-        document.getElementById('searchInput').value = '';
-        document.getElementById('searchInput').focus();
-        document.getElementById('voterSection').classList.add('d-none');
+        // Go back to list
+        if (currentVoterList.length > 0) {
+            const idx = currentVoterList.findIndex(v => v.id === currentVoter.id);
+            if (idx >= 0) currentVoterList[idx].vote_status = selectedStatus;
+            const prefix = document.getElementById('boxPrefix').value.trim();
+                const number = document.getElementById('searchInput').value.trim();
+                displayVoterList(currentVoterList, prefix + number);
+            document.getElementById('voterSection').classList.add('d-none');
+        } else {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchInput').focus();
+            document.getElementById('voterSection').classList.add('d-none');
+        }
 
         // Update pending badge
         if (typeof updatePendingSyncBadge === 'function') {
