@@ -20,7 +20,7 @@
                     <thead class="table-light">
                         <tr>
                             <th>Name</th>
-                            <th>Location</th>
+                            <th class="d-none d-md-table-cell">Location</th>
                             <th class="text-center">Voters</th>
                             <th class="text-center">Actions</th>
                         </tr>
@@ -92,15 +92,15 @@ function renderBoxes() {
     tbody.innerHTML = boxes.map(box => `
         <tr>
             <td><strong>${box.name}</strong></td>
-            <td>${box.location || '-'}</td>
+            <td class="d-none d-md-table-cell">${box.location || '-'}</td>
             <td class="text-center">
                 <a href="/voters/list?box_id=${box.id}" class="badge bg-primary">${box.voter_count}</a>
             </td>
             <td class="text-center">
-                <button class="btn btn-sm btn-outline-primary" onclick="showEditModal(${box.id})">
+                <button class="btn btn-sm btn-outline-primary" style="min-height:38px" onclick="showEditModal(${box.id})">
                     <i class="bi bi-pencil"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-danger" onclick="deleteBox(${box.id})">
+                <button class="btn btn-sm btn-outline-danger" style="min-height:38px" onclick="deleteBox(${box.id})">
                     <i class="bi bi-trash"></i>
                 </button>
             </td>

@@ -2,6 +2,21 @@
 
 {% block title %}Voters - VoteCouncil{% endblock %}
 
+{% block extra_css %}
+<style>
+    .bulk-action-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(33, 37, 41, 0.95);
+        padding: 12px 0;
+        z-index: 1050;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <!-- Header -->
@@ -10,10 +25,16 @@
             <i class="bi bi-people"></i> Voters
             <span class="badge bg-secondary" id="voterCount">0</span>
         </h1>
-        <div class="d-flex gap-2">
-            <a href="/reports/export/voters" class="btn btn-export">
-                <i class="bi bi-download"></i> Export CSV
-            </a>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-outline-secondary" onclick="openPrintView()">
+                <i class="bi bi-printer"></i> Print List
+            </button>
+            <button class="btn btn-export" onclick="exportFilteredCSV()">
+                <i class="bi bi-download"></i> CSV
+            </button>
+            <button class="btn btn-export" onclick="exportFilteredPDF()">
+                <i class="bi bi-file-earmark-pdf"></i> PDF
+            </button>
             {% if user.role.value in ['admin', 'operator'] %}
             <a href="/voters/new" class="btn btn-primary">
                 <i class="bi bi-plus-lg"></i> Add Voter
@@ -26,23 +47,23 @@
     <div class="card mb-4">
         <div class="card-body">
             <form id="filterForm" class="row g-3">
-                <div class="col-md-4">
+                <div class="col-12 col-sm-6 col-md-4">
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control" id="search" name="search" placeholder="Search name, ID, contact...">
+                        <input type="text" class="form-control" id="search" name="search" placeholder="Search name, national ID, contact...">
                     </div>
                 </div>
-                <div class="col-md-2">
+                <div class="col-6 col-sm-3 col-md-2">
                     <select class="form-select" id="boxFilter" name="box_id">
                         <option value="">All Boxes</option>
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-6 col-sm-3 col-md-2">
                     <select class="form-select" id="focalFilter" name="focal_id">
                         <option value="">All Focals</option>
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-6 col-sm-3 col-md-2">
                     <select class="form-select" id="statusFilter" name="vote_status">
                         <option value="">All Status</option>
                         <option value="not_voted">Not Voted</option>
@@ -51,7 +72,7 @@
                         <option value="undecided">Undecided</option>
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-6 col-sm-3 col-md-2">
                     <select class="form-select" id="pledgedFilter" name="is_pledged">
                         <option value="">All Voters</option>
                         <option value="yes">Pledged</option>
@@ -70,14 +91,20 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
+                            {% if user.role.value == 'admin' %}
+                            <th class="text-center" style="width: 40px;">
+                                <input type="checkbox" class="form-check-input" id="selectAll" title="Select all">
+                            </th>
+                            {% endif %}
                             <th>Name</th>
-                            <th>ID</th>
                             <th>Box</th>
-                            <th>Contact</th>
-                            <th>Focals</th>
+                            <th class="d-none d-md-table-cell">Contact</th>
+                            <th class="d-none d-md-table-cell">Focals</th>
                             <th class="text-center">Pledged</th>
                             <th class="text-center">Status</th>
+                            {% if user.role.value == 'admin' %}
                             <th class="text-center">Actions</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody id="voterList">
@@ -102,35 +129,54 @@
     </div>
 </div>
 
-<!-- Quick Status Update Modal -->
-<div class="modal fade" id="statusModal" tabindex="-1">
+{% if user.role.value == 'admin' %}
+<!-- Bulk Action Floating Bar -->
+<div id="bulkActionBar" class="bulk-action-bar" style="display: none;">
+    <div class="container-fluid d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span class="text-white fw-bold">
+            <i class="bi bi-check2-square"></i> <span id="selectedCount">0</span> voter(s) selected
+        </span>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-success btn-sm" onclick="bulkUpdatePledge('yes')">
+                <i class="bi bi-check-circle"></i> Pledged
+            </button>
+            <button class="btn btn-warning btn-sm" onclick="bulkUpdatePledge('undecided')">
+                <i class="bi bi-question-circle"></i> Undecided
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="bulkUpdatePledge('no')">
+                <i class="bi bi-dash-circle"></i> Not Pledged
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Pledge Status Update Modal -->
+<div class="modal fade" id="pledgeModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Update Vote Status</h5>
+                <h5 class="modal-title">Update Pledge Status</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Voter: <strong id="statusVoterName"></strong></p>
-                <input type="hidden" id="statusVoterId">
+                <p>Voter: <strong id="pledgeVoterName"></strong></p>
+                <input type="hidden" id="pledgeVoterId">
                 <div class="d-grid gap-2">
-                    <button class="btn btn-success btn-lg" onclick="updateStatus('voted_pledged')">
-                        <i class="bi bi-check-circle"></i> Voted for Pledged Candidate
+                    <button class="btn btn-success btn-lg" onclick="updatePledge('yes')">
+                        <i class="bi bi-check-circle"></i> Pledged
                     </button>
-                    <button class="btn btn-danger btn-lg" onclick="updateStatus('voted_other')">
-                        <i class="bi bi-x-circle"></i> Voted for Other
+                    <button class="btn btn-warning btn-lg" onclick="updatePledge('undecided')">
+                        <i class="bi bi-question-circle"></i> Undecided
                     </button>
-                    <button class="btn btn-warning btn-lg" onclick="updateStatus('undecided')">
-                        <i class="bi bi-question-circle"></i> Undecided / Unknown
-                    </button>
-                    <button class="btn btn-secondary" onclick="updateStatus('not_voted')">
-                        <i class="bi bi-arrow-counterclockwise"></i> Reset to Not Voted
+                    <button class="btn btn-secondary btn-lg" onclick="updatePledge('no')">
+                        <i class="bi bi-dash-circle"></i> Not Pledged
                     </button>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
@@ -175,6 +221,10 @@ function applyUrlParams() {
 }
 
 async function loadVoters() {
+    // Clear bulk selection on reload
+    selectedVoterIds.clear();
+    updateBulkActionBar();
+
     const search = document.getElementById('search').value;
     const boxId = document.getElementById('boxFilter').value;
     const focalId = document.getElementById('focalFilter').value;
@@ -227,14 +277,27 @@ function renderVoters(voters) {
 
     tbody.innerHTML = voters.map(voter => `
         <tr>
-            <td>
-                <a href="/voters/${voter.id}/view">${voter.name}</a>
+            {% if user.role.value == 'admin' %}
+            <td class="text-center">
+                <input type="checkbox" class="form-check-input voter-checkbox" value="${voter.id}" onchange="toggleVoterSelection(${voter.id}, this.checked)">
             </td>
-            <td><small class="text-muted">${voter.voter_id || '-'}</small></td>
-            <td>${voter.box ? voter.box.name : '-'}</td>
-            <td>${voter.contact || '-'}</td>
+            {% endif %}
             <td>
-                ${voter.focals.map(f => `<span class="badge bg-light text-dark">${f.name}</span>`).join(' ')}
+                <div class="d-flex align-items-center gap-2">
+                    ${voter.photo_path
+                        ? `<img src="/uploads/${voter.photo_path}" class="rounded-circle" style="width:32px;height:32px;object-fit:cover;" alt="">`
+                        : `<span class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center" style="width:32px;height:32px;"><i class="bi bi-person text-muted"></i></span>`
+                    }
+                    <div>
+                        <a href="/voters/${voter.id}/view">${escapeHtml(voter.name)}</a>
+                        ${voter.national_id ? `<br><small class="text-muted">${escapeHtml(voter.national_id)}</small>` : ''}
+                    </div>
+                </div>
+            </td>
+            <td>${voter.box ? escapeHtml(voter.box.name) : '-'}</td>
+            <td class="d-none d-md-table-cell">${escapeHtml(voter.contact) || '-'}</td>
+            <td class="d-none d-md-table-cell">
+                ${voter.focals.map(f => `<span class="badge bg-light text-dark">${escapeHtml(f.name)}</span>`).join(' ')}
             </td>
             <td class="text-center">
                 ${voter.is_pledged === 'yes' ? '<i class="bi bi-check-circle-fill text-success"></i>' : voter.is_pledged === 'undecided' ? '<i class="bi bi-question-circle-fill text-warning"></i>' : '<i class="bi bi-dash text-muted"></i>'}
@@ -242,13 +305,18 @@ function renderVoters(voters) {
             <td class="text-center">
                 ${getStatusBadge(voter.vote_status)}
             </td>
+            {% if user.role.value == 'admin' %}
             <td class="text-center">
-                <button class="btn btn-sm btn-outline-primary" onclick="openStatusModal(${voter.id}, '${voter.name.replace(/'/g, "\\'")}')">
-                    <i class="bi bi-pencil"></i>
+                <button class="btn btn-sm btn-outline-primary" data-voter-id="${voter.id}" data-voter-name="${escapeHtml(voter.name)}" onclick="openPledgeModal(this.dataset.voterId, this.dataset.voterName)">
+                    <i class="bi bi-hand-thumbs-up"></i>
                 </button>
             </td>
+            {% endif %}
         </tr>
     `).join('');
+
+    // Reset select-all checkbox
+    document.getElementById('selectAll').checked = false;
 }
 
 function getStatusBadge(status) {
@@ -322,33 +390,127 @@ function debounce(func, wait) {
     };
 }
 
-// Status modal
-function openStatusModal(voterId, voterName) {
-    document.getElementById('statusVoterId').value = voterId;
-    document.getElementById('statusVoterName').textContent = voterName;
-    new bootstrap.Modal(document.getElementById('statusModal')).show();
+// Pledge modal
+function openPledgeModal(voterId, voterName) {
+    document.getElementById('pledgeVoterId').value = voterId;
+    document.getElementById('pledgeVoterName').textContent = voterName;
+    new bootstrap.Modal(document.getElementById('pledgeModal')).show();
 }
 
-async function updateStatus(status) {
-    const voterId = document.getElementById('statusVoterId').value;
+async function updatePledge(pledgeStatus) {
+    const voterId = document.getElementById('pledgeVoterId').value;
 
     try {
-        const response = await fetch(`/voters/${voterId}/status`, {
+        const response = await fetch(`/voters/${voterId}/pledge`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ vote_status: status })
+            body: JSON.stringify({ is_pledged: pledgeStatus })
         });
 
         if (response.ok) {
-            bootstrap.Modal.getInstance(document.getElementById('statusModal')).hide();
+            bootstrap.Modal.getInstance(document.getElementById('pledgeModal')).hide();
             loadVoters();
-            showToast('Status updated', 'success');
+            showToast('Pledge status updated', 'success');
         } else {
-            showToast('Failed to update status', 'danger');
+            showToast('Failed to update pledge status', 'danger');
         }
     } catch (error) {
-        showToast('Error updating status', 'danger');
+        showToast('Error updating pledge status', 'danger');
     }
+}
+
+function exportFilteredCSV() {
+    const params = _getFilterParams();
+    window.location.href = '/voters/export/csv?' + params.join('&');
+}
+
+function exportFilteredPDF() {
+    const params = _getFilterParams();
+    window.open('/voters/export/pdf?' + params.join('&'), '_blank');
+}
+
+function openPrintView() {
+    const params = _getFilterParams();
+    window.open('/voters/print?' + params.join('&'), '_blank');
+}
+
+// Bulk selection
+const selectedVoterIds = new Set();
+
+function toggleVoterSelection(voterId, isChecked) {
+    if (isChecked) {
+        selectedVoterIds.add(voterId);
+    } else {
+        selectedVoterIds.delete(voterId);
+    }
+    updateBulkActionBar();
+}
+
+function updateBulkActionBar() {
+    const bar = document.getElementById('bulkActionBar');
+    const countEl = document.getElementById('selectedCount');
+    countEl.textContent = selectedVoterIds.size;
+    bar.style.display = selectedVoterIds.size > 0 ? 'block' : 'none';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('selectAll').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.voter-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = this.checked;
+            const voterId = parseInt(cb.value);
+            if (this.checked) {
+                selectedVoterIds.add(voterId);
+            } else {
+                selectedVoterIds.delete(voterId);
+            }
+        });
+        updateBulkActionBar();
+    });
+});
+
+async function bulkUpdatePledge(pledgeStatus) {
+    if (selectedVoterIds.size === 0) return;
+
+    const voterIds = Array.from(selectedVoterIds);
+    try {
+        const response = await fetch('/voters/bulk-pledge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                voter_ids: voterIds,
+                is_pledged: pledgeStatus
+            })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            selectedVoterIds.clear();
+            updateBulkActionBar();
+            loadVoters();
+            showToast(result.message, 'success');
+        } else {
+            showToast('Failed to update pledge status', 'danger');
+        }
+    } catch (error) {
+        showToast('Error updating pledge status', 'danger');
+    }
+}
+
+function _getFilterParams() {
+    const search = document.getElementById('search').value;
+    const boxId = document.getElementById('boxFilter').value;
+    const focalId = document.getElementById('focalFilter').value;
+    const status = document.getElementById('statusFilter').value;
+    const pledged = document.getElementById('pledgedFilter').value;
+
+    const params = [];
+    if (search) params.push(`search=${encodeURIComponent(search)}`);
+    if (boxId) params.push(`box_id=${boxId}`);
+    if (focalId) params.push(`focal_id=${focalId}`);
+    if (status) params.push(`vote_status=${status}`);
+    if (pledged) params.push(`is_pledged=${pledged}`);
+    return params;
 }
 </script>
 {% endblock %}

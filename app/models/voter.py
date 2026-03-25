@@ -55,6 +55,7 @@ class Voter(Base):
     is_pledged = Column(Enum(PledgeStatus), default=PledgeStatus.no)
     vote_status = Column(Enum(VoteStatus), default=VoteStatus.not_voted)
     voted_for = Column(String(100), nullable=True)  # Store name/info of who they voted for
+    voted_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -91,6 +91,8 @@
                             <span class="badge bg-light text-primary">{{ user.role.value }}</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/auth/change-password"><i class="bi bi-key"></i> Change Password</a></li>
+                            <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="/auth/logout"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
                         </ul>
                     </li>
@@ -99,6 +101,13 @@
         </div>
     </nav>
     {% endif %}
+
+    <!-- Offline Indicator Bar -->
+    <div id="offlineIndicator" class="alert alert-warning text-center mb-0 rounded-0 py-2 d-none" role="alert" style="z-index: 1050;">
+        <i class="bi bi-wifi-off me-2"></i>
+        You are offline. Changes will sync when connection is restored.
+        <span id="pendingSyncBadge" class="badge bg-dark ms-2 d-none">0 pending</span>
+    </div>
 
     <!-- Main Content -->
     <main class="{% if user %}py-3{% endif %}">

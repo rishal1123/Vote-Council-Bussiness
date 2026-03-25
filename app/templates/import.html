@@ -155,10 +155,62 @@ document.getElementById('importForm').addEventListener('submit', async (e) => {
                             <p class="mb-1"><strong>Photos imported:</strong> ${result.photos_imported || 0}</p>
                         </div>
                     </div>
+                    ${result.duplicates && result.duplicates.length > 0 ? `
+                        <hr>
+                        <div class="alert alert-warning mb-0">
+                            <h6><i class="bi bi-exclamation-triangle"></i> Duplicate ID Cards Rejected (${result.duplicates.length})</h6>
+                            <div class="table-responsive mt-2" style="max-height: 300px; overflow-y: auto;">
+                                <table class="table table-sm table-bordered mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Row</th>
+                                            <th>National ID</th>
+                                            <th>Name</th>
+                                            <th>Reason</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${result.duplicates.map(d => `
+                                            <tr>
+                                                <td>${d.row}</td>
+                                                <td><strong>${d.national_id}</strong></td>
+                                                <td>${d.name}</td>
+                                                <td><small>${d.reason}</small></td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${result.warnings && result.warnings.length > 0 ? `
+                        <hr>
+                        <div class="alert alert-warning mb-0">
+                            <h6><i class="bi bi-exclamation-triangle"></i> Validation Warnings (${result.warnings.length})</h6>
+                            <div class="table-responsive mt-2" style="max-height: 300px; overflow-y: auto;">
+                                <table class="table table-sm table-bordered mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Row</th>
+                                            <th>Warning</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${result.warnings.map(w => `
+                                            <tr>
+                                                <td>${w.row}</td>
+                                                <td><small>${w.description}</small></td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    ` : ''}
                     ${result.errors.length > 0 ? `
                         <hr>
                         <details>
-                            <summary>Errors (${result.errors.length})</summary>
+                            <summary>Other Errors (${result.errors.length})</summary>
                             <ul class="mt-2">
                                 ${result.errors.slice(0, 20).map(e => `<li>${e}</li>`).join('')}
                                 ${result.errors.length > 20 ? `<li>... and ${result.errors.length - 20} more</li>` : ''}

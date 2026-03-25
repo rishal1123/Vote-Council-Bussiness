@@ -6,16 +6,18 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User, UserRole
-from app.schemas.user import UserCreate, UserResponse, Token
+from app.schemas.user import UserCreate, UserResponse, Token, PasswordChangeRequest
 from app.services.auth import (
     authenticate_user,
     create_access_token,
     get_password_hash,
+    verify_password,
     get_current_user,
     get_current_user_required,
     require_role
 )
 from app.config import settings
+from app.services.logging import log_activity, Actions
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 templates = Jinja2Templates(directory="app/templates")
@@ -40,13 +42,27 @@ async def login(
     username = form.get("username")
     password = form.get("password")
 
+    ip_address = request.client.host if request.client else None
+
     user = authenticate_user(db, username, password)
     if not user:
+        log_activity(
+            db, Actions.LOGIN_FAILED,
+            details=f"Failed login attempt for username: {username}",
+            ip_address=ip_address
+        )
         return templates.TemplateResponse(
             "login.html",
             {"request": request, "error": "Invalid username or password"},
             status_code=400
         )
+
+    log_activity(
+        db, Actions.LOGIN,
+        user=user,
+        details=f"User {user.username} logged in",
+        ip_address=ip_address
+    )
 
     access_token = create_access_token(
         data={"sub": user.username, "role": user.role.value}
@@ -57,7 +73,9 @@ async def login(
         key="access_token",
         value=access_token,
         httponly=True,
-        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        samesite="Lax",
+        secure=False,  # Set to True in production when using HTTPS
     )
     return response
 
@@ -120,6 +138,55 @@ async def delete_user(
     db.delete(user)
     db.commit()
     return {"message": "User deleted"}
+
+
+@router.get("/change-password", response_class=HTMLResponse)
+async def change_password_page(
+    request: Request,
+    user: User = Depends(get_current_user_required)
+):
+    """Render change password page."""
+    return templates.TemplateResponse(
+        "change_password.html",
+        {"request": request, "user": user}
+    )
+
+
+@router.post("/change-password")
+async def change_password(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user_required)
+):
+    """Handle password change form submission."""
+    form = await request.form()
+    current_password = form.get("current_password")
+    new_password = form.get("new_password")
+
+    # Validate current password
+    if not verify_password(current_password, user.password_hash):
+        return templates.TemplateResponse(
+            "change_password.html",
+            {"request": request, "user": user, "error": "Current password is incorrect"},
+            status_code=400
+        )
+
+    # Validate new password length
+    if not new_password or len(new_password) < 6:
+        return templates.TemplateResponse(
+            "change_password.html",
+            {"request": request, "user": user, "error": "New password must be at least 6 characters"},
+            status_code=400
+        )
+
+    # Update password
+    user.password_hash = get_password_hash(new_password)
+    db.commit()
+
+    return templates.TemplateResponse(
+        "change_password.html",
+        {"request": request, "user": user, "success": "Password changed successfully"}
+    )
 
 
 @router.get("/me", response_model=UserResponse)

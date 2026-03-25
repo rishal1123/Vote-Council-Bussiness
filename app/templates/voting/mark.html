@@ -26,7 +26,7 @@
         color: #6c757d;
     }
     .status-btn {
-        min-width: 120px;
+        min-width: 100px;
         padding: 15px 20px;
         font-size: 1.1rem;
     }
@@ -79,10 +79,10 @@
         <div class="voter-card card shadow">
             <div class="card-body">
                 <div class="row">
-                    <div class="col-auto">
+                    <div class="col-12 col-sm-auto">
                         <div id="voterPhoto"></div>
                     </div>
-                    <div class="col">
+                    <div class="col-12 col-sm">
                         <h3 id="voterName" class="mb-1"></h3>
                         <p class="text-muted mb-2">
                             <span id="voterId"></span>
@@ -100,28 +100,22 @@
                 </div>
             </div>
 
-            <!-- Vote Status Selection -->
+            <!-- Step 1: Has this person voted? -->
             <div class="card-body border-top">
-                <h5 class="mb-3"><i class="bi bi-check-square"></i> Mark Vote Status</h5>
-                <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
-                    <button class="btn btn-outline-success status-btn" onclick="setStatus('voted_pledged')">
-                        <i class="bi bi-check-circle"></i><br>Voted Pledged
+                <h5 class="mb-3"><i class="bi bi-check-square"></i> Step 1: Has this person voted?</h5>
+                <div class="d-flex flex-wrap justify-content-center gap-2">
+                    <button class="btn btn-outline-success status-btn" onclick="setVoted(true)">
+                        <i class="bi bi-check-circle"></i><br>Yes, Voted
                     </button>
-                    <button class="btn btn-outline-danger status-btn" onclick="setStatus('voted_other')">
-                        <i class="bi bi-x-circle"></i><br>Voted Other
-                    </button>
-                    <button class="btn btn-outline-warning status-btn" onclick="setStatus('undecided')">
-                        <i class="bi bi-question-circle"></i><br>Undecided
-                    </button>
-                    <button class="btn btn-outline-secondary status-btn" onclick="setStatus('not_voted')">
+                    <button class="btn btn-outline-secondary status-btn" onclick="setVoted(false)">
                         <i class="bi bi-dash-circle"></i><br>Not Voted
                     </button>
                 </div>
             </div>
 
-            <!-- Candidate Selection (shown after voting) -->
+            <!-- Step 2: Who did they vote for? (shown if voted) -->
             <div id="candidateSection" class="card-body border-top d-none">
-                <h5 class="mb-3"><i class="bi bi-person-check"></i> Who did they vote for?</h5>
+                <h5 class="mb-3"><i class="bi bi-person-check"></i> Step 2: Who did they vote for?</h5>
                 <div id="candidateList" class="row g-2">
                     <!-- Populated by JS -->
                 </div>
@@ -213,7 +207,7 @@ function displayVoter(voter) {
         photoDiv.innerHTML = `<div class="voter-photo-placeholder"><i class="bi bi-person"></i></div>`;
     }
 
-    // Basic info
+    // Basic info (use textContent for safety against XSS)
     document.getElementById('voterName').textContent = voter.name;
     document.getElementById('voterId').textContent = `ID: ${voter.voter_id || 'N/A'}`;
     document.getElementById('voterBox').textContent = voter.box_name || 'No Box';
@@ -256,69 +250,96 @@ function displayVoter(voter) {
     renderCandidates();
 }
 
+let pledgedCandidate = null;
+
 function renderCandidates() {
     const list = document.getElementById('candidateList');
-    list.innerHTML = candidates.map(c => `
-        <div class="col-6 col-md-4">
-            <div class="card candidate-option p-3 text-center" data-id="${c.id}" onclick="selectCandidate(${c.id})">
-                <div class="fw-bold">${c.name}</div>
-                <small class="text-muted">${c.party || ''} ${c.number ? '#' + c.number : ''}</small>
-                ${c.is_pledged ? '<span class="badge bg-success mt-1">Our Candidate</span>' : ''}
-            </div>
-        </div>
-    `).join('');
 
-    // Add "Unknown" option
-    list.innerHTML += `
+    // Find the pledged candidate
+    pledgedCandidate = candidates.find(c => c.is_pledged) || null;
+
+    // Show pledged candidate first, then others, then "Not Disclosed"
+    let html = '';
+
+    // Pledged candidate (highlighted)
+    if (pledgedCandidate) {
+        html += `
+            <div class="col-12 col-sm-6 col-md-4">
+                <div class="card candidate-option p-3 text-center border-success" data-id="${pledgedCandidate.id}" data-pledged="true" onclick="selectCandidate(${pledgedCandidate.id}, true)">
+                    <span class="badge bg-success mb-1">Our Candidate</span>
+                    <div class="fw-bold">${escapeHtml(pledgedCandidate.name)}</div>
+                    <small class="text-muted">${escapeHtml(pledgedCandidate.party) || ''} ${pledgedCandidate.number ? '#' + escapeHtml(String(pledgedCandidate.number)) : ''}</small>
+                </div>
+            </div>
+        `;
+    }
+
+    // Other candidates
+    candidates.filter(c => !c.is_pledged).forEach(c => {
+        html += `
+            <div class="col-6 col-md-4">
+                <div class="card candidate-option p-3 text-center" data-id="${c.id}" data-pledged="false" onclick="selectCandidate(${c.id}, false)">
+                    <div class="fw-bold">${escapeHtml(c.name)}</div>
+                    <small class="text-muted">${escapeHtml(c.party) || ''} ${c.number ? '#' + escapeHtml(String(c.number)) : ''}</small>
+                </div>
+            </div>
+        `;
+    });
+
+    // Not Disclosed option
+    html += `
         <div class="col-6 col-md-4">
-            <div class="card candidate-option p-3 text-center" data-id="0" onclick="selectCandidate(0)">
-                <div class="fw-bold">Unknown</div>
+            <div class="card candidate-option p-3 text-center" data-id="0" data-pledged="false" onclick="selectCandidate(0, false)">
+                <div class="fw-bold">Not Disclosed</div>
                 <small class="text-muted">Did not disclose</small>
             </div>
         </div>
     `;
+
+    list.innerHTML = html;
 }
 
-function setStatus(status) {
-    selectedStatus = status;
+function setVoted(hasVoted) {
+    // Reset candidate selection
+    selectedCandidate = null;
+    document.querySelectorAll('.candidate-option').forEach(el => el.classList.remove('selected'));
 
     // Update button states
     document.querySelectorAll('.status-btn').forEach(btn => {
-        btn.classList.remove('active', 'btn-success', 'btn-danger', 'btn-warning', 'btn-secondary');
-        btn.classList.add('btn-outline-success', 'btn-outline-danger', 'btn-outline-warning', 'btn-outline-secondary');
+        btn.classList.remove('active', 'btn-success', 'btn-secondary');
+        btn.classList.add('btn-outline-success', 'btn-outline-secondary');
     });
 
-    const btnMap = {
-        'voted_pledged': 0,
-        'voted_other': 1,
-        'undecided': 2,
-        'not_voted': 3
-    };
-    const btn = document.querySelectorAll('.status-btn')[btnMap[status]];
-    const colorClass = status === 'voted_pledged' ? 'success' :
-                       status === 'voted_other' ? 'danger' :
-                       status === 'undecided' ? 'warning' : 'secondary';
-    btn.classList.remove(`btn-outline-${colorClass}`);
-    btn.classList.add(`btn-${colorClass}`, 'active');
-
-    // Show candidate selection for voted statuses
-    if (status === 'voted_pledged' || status === 'voted_other' || status === 'undecided') {
+    const btns = document.querySelectorAll('.status-btn');
+    if (hasVoted) {
+        selectedStatus = '_voted'; // Temporary, will be resolved based on candidate
+        btns[0].classList.remove('btn-outline-success');
+        btns[0].classList.add('btn-success', 'active');
         document.getElementById('candidateSection').classList.remove('d-none');
     } else {
+        selectedStatus = 'not_voted';
+        btns[1].classList.remove('btn-outline-secondary');
+        btns[1].classList.add('btn-secondary', 'active');
         document.getElementById('candidateSection').classList.add('d-none');
-        selectedCandidate = null;
     }
 
     updateConfirmButton();
 }
 
-function selectCandidate(id) {
+function selectCandidate(id, isPledgedCandidate) {
     selectedCandidate = id;
 
-    // Update selection
-    document.querySelectorAll('.candidate-option').forEach(el => {
-        el.classList.remove('selected');
-    });
+    // Determine vote status based on which candidate was selected
+    if (isPledgedCandidate) {
+        selectedStatus = 'voted_pledged';
+    } else if (id === 0) {
+        selectedStatus = 'undecided';
+    } else {
+        selectedStatus = 'voted_other';
+    }
+
+    // Update selection visual
+    document.querySelectorAll('.candidate-option').forEach(el => el.classList.remove('selected'));
     document.querySelector(`.candidate-option[data-id="${id}"]`).classList.add('selected');
 
     updateConfirmButton();
@@ -329,7 +350,7 @@ function updateConfirmButton() {
 
     if (selectedStatus === 'not_voted') {
         btn.disabled = false;
-    } else if (selectedStatus && selectedCandidate !== null) {
+    } else if (selectedStatus && selectedStatus !== '_voted' && selectedCandidate !== null) {
         btn.disabled = false;
     } else {
         btn.disabled = true;
@@ -352,18 +373,40 @@ async function confirmVote() {
         });
 
         if (response.ok) {
-            showToast(`Marked ${currentVoter.name} as ${selectedStatus.replace(/_/g, ' ')}`, 'success');
+            const result = await response.json().catch(() => ({}));
+            if (result.status === 'queued') {
+                // Queued offline by the service worker
+                showToast('Saved offline - will sync when online', 'warning');
+            } else {
+                showToast(`Marked ${currentVoter.name} as ${selectedStatus.replace(/_/g, ' ')}`, 'success');
+            }
             addToRecentMarks(currentVoter, selectedStatus);
 
             // Clear and focus search
             document.getElementById('searchInput').value = '';
             document.getElementById('searchInput').focus();
             document.getElementById('voterSection').classList.add('d-none');
+
+            // Update pending badge
+            if (typeof updatePendingSyncBadge === 'function') {
+                updatePendingSyncBadge();
+            }
         } else {
             showToast('Failed to update vote status', 'danger');
         }
     } catch (error) {
-        showToast('Error updating vote status', 'danger');
+        showToast('Saved offline - will sync when online', 'warning');
+        addToRecentMarks(currentVoter, selectedStatus);
+
+        // Clear and focus search
+        document.getElementById('searchInput').value = '';
+        document.getElementById('searchInput').focus();
+        document.getElementById('voterSection').classList.add('d-none');
+
+        // Update pending badge
+        if (typeof updatePendingSyncBadge === 'function') {
+            updatePendingSyncBadge();
+        }
     }
 }
 
@@ -390,8 +433,8 @@ function addToRecentMarks(voter, status) {
     list.innerHTML = recentMarks.map(m => `
         <div class="list-group-item d-flex justify-content-between align-items-center">
             <div>
-                <strong>${m.name}</strong>
-                <small class="text-muted ms-2">${m.voter_id || ''}</small>
+                <strong>${escapeHtml(m.name)}</strong>
+                <small class="text-muted ms-2">${escapeHtml(m.voter_id) || ''}</small>
             </div>
             <div>
                 <span class="badge bg-${statusColors[m.status]}">${m.status.replace(/_/g, ' ')}</span>

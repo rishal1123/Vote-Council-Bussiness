@@ -137,6 +137,12 @@
                     </p>
                     {% endif %}
 
+                    {% if voter.voted_at %}
+                    <p class="text-center text-muted">
+                        <small>Voted at: {{ voter.voted_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                    </p>
+                    {% endif %}
+
                     <hr>
 
                     <div class="d-grid gap-2">

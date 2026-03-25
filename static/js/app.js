@@ -1,5 +1,13 @@
 // VoteCouncil Application JavaScript
 
+// XSS protection - escape HTML entities
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
 // Toast notification system
 function showToast(message, type = 'info') {
     // Create toast container if it doesn't exist
@@ -122,13 +130,102 @@ if ('serviceWorker' in navigator) {
     });
 }
 
+// --- IndexedDB helper for reading pending votes from the app ---
+const OFFLINE_DB_NAME = 'votecouncil-offline';
+const OFFLINE_DB_VERSION = 1;
+const PENDING_STORE = 'pendingVotes';
+
+function openOfflineDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(OFFLINE_DB_NAME, OFFLINE_DB_VERSION);
+        req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(PENDING_STORE)) {
+                db.createObjectStore(PENDING_STORE, { keyPath: 'id', autoIncrement: true });
+            }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function getPendingVoteCount() {
+    try {
+        const db = await openOfflineDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(PENDING_STORE, 'readonly');
+            const req = tx.objectStore(PENDING_STORE).count();
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    } catch (e) {
+        return 0;
+    }
+}
+
+// --- Offline indicator and pending sync badge ---
+
+function updateOfflineIndicator() {
+    const bar = document.getElementById('offlineIndicator');
+    if (!bar) return;
+
+    if (!navigator.onLine) {
+        bar.classList.remove('d-none');
+    } else {
+        bar.classList.add('d-none');
+    }
+}
+
+async function updatePendingSyncBadge() {
+    const badge = document.getElementById('pendingSyncBadge');
+    if (!badge) return;
+
+    const count = await getPendingVoteCount();
+    if (count > 0) {
+        badge.textContent = count + ' pending';
+        badge.classList.remove('d-none');
+    } else {
+        badge.classList.add('d-none');
+    }
+}
+
 // Online/Offline status
 window.addEventListener('online', () => {
     showToast('You are back online', 'success');
+    updateOfflineIndicator();
+    updatePendingSyncBadge();
+
+    // Trigger background sync if supported
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready.then(registration => {
+            if (registration.sync) {
+                registration.sync.register('sync-vote-status');
+            }
+        });
+    }
 });
 
 window.addEventListener('offline', () => {
     showToast('You are offline. Some features may not work.', 'warning');
+    updateOfflineIndicator();
+});
+
+// Listen for messages from the service worker
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data.type === 'vote-queued' || event.data.type === 'sync-complete') {
+            updatePendingSyncBadge();
+            if (event.data.type === 'sync-complete') {
+                updateOfflineIndicator();
+            }
+        }
+    });
+}
+
+// Initialize offline UI on page load
+document.addEventListener('DOMContentLoaded', () => {
+    updateOfflineIndicator();
+    updatePendingSyncBadge();
 });
 
 // API helper
@@ -160,13 +257,6 @@ function debounce(func, wait) {
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
     };
-}
-
-// Escape HTML
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
 }
 
 // Format numbers

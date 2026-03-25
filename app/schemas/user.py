@@ -40,3 +40,8 @@ class TokenData(BaseModel):
 class LoginForm(BaseModel):
     username: str
     password: str
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str

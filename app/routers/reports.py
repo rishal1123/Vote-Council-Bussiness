@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.database import get_db
-from app.models import User, Voter, Box, Focal
+from app.models import User, Voter, Box, Focal, Candidate
 from app.models.voter import VoteStatus, PledgeStatus
 from app.services.auth import get_current_user_required
 
@@ -219,6 +219,45 @@ async def get_pledged_performance(
         "conversion_rate": round(voted_pledged / total_pledged * 100, 1),
         "turnout_rate": round((total_pledged - not_voted) / total_pledged * 100, 1)
     }
+
+
+@router.get("/data/candidates")
+async def get_candidate_votes(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user_required)
+):
+    """Get vote counts per candidate."""
+    candidates = db.query(Candidate).all()
+    total_voted = db.query(Voter).filter(Voter.vote_status != VoteStatus.not_voted).count()
+
+    result = []
+    accounted = 0
+    for c in candidates:
+        count = db.query(Voter).filter(Voter.voted_for == str(c.id)).count()
+        accounted += count
+        result.append({
+            "id": c.id,
+            "name": c.name,
+            "party": c.party,
+            "number": c.number,
+            "is_pledged": c.is_pledged,
+            "votes": count
+        })
+
+    # Undisclosed
+    undisclosed = total_voted - accounted
+    if undisclosed > 0:
+        result.append({
+            "id": 0,
+            "name": "Not Disclosed",
+            "party": None,
+            "number": None,
+            "is_pledged": False,
+            "votes": undisclosed
+        })
+
+    result.sort(key=lambda x: x["votes"], reverse=True)
+    return {"candidates": result, "total_voted": total_voted}
 
 
 @router.get("/export/voters")

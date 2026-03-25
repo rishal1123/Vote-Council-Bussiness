@@ -20,7 +20,7 @@
                     <thead class="table-light">
                         <tr>
                             <th>Name</th>
-                            <th>Phone</th>
+                            <th class="d-none d-md-table-cell">Phone</th>
                             <th class="text-center">Voters</th>
                             <th class="text-center">Actions</th>
                         </tr>
@@ -92,15 +92,15 @@ function renderFocals() {
     tbody.innerHTML = focals.map(focal => `
         <tr>
             <td><strong>${focal.name}</strong></td>
-            <td>${focal.phone || '-'}</td>
+            <td class="d-none d-md-table-cell">${focal.phone || '-'}</td>
             <td class="text-center">
                 <a href="/voters/list?focal_id=${focal.id}" class="badge bg-primary">${focal.voter_count}</a>
             </td>
             <td class="text-center">
-                <button class="btn btn-sm btn-outline-primary" onclick="showEditModal(${focal.id})">
+                <button class="btn btn-sm btn-outline-primary" style="min-height:38px" onclick="showEditModal(${focal.id})">
                     <i class="bi bi-pencil"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-danger" onclick="deleteFocal(${focal.id})">
+                <button class="btn btn-sm btn-outline-danger" style="min-height:38px" onclick="deleteFocal(${focal.id})">
                     <i class="bi bi-trash"></i>
                 </button>
             </td>

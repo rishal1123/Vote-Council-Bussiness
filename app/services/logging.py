@@ -47,6 +47,10 @@ class Actions:
     IMPORT_COMPLETE = "import_complete"
     IMPORT_FAILED = "import_failed"
 
+    # System
+    APP_STARTUP = "app_startup"
+    APP_ERROR = "app_error"
+
     # Admin
     SYSTEM_RESET = "system_reset"
     USER_CREATE = "user_create"

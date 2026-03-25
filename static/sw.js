@@ -1,16 +1,68 @@
 // VoteCouncil Service Worker
-const CACHE_NAME = 'votecouncil-v1';
-const STATIC_CACHE = 'votecouncil-static-v1';
+const CACHE_NAME = 'votecouncil-v2';
+const STATIC_CACHE = 'votecouncil-static-v2';
 
 // Static assets to cache
 const STATIC_ASSETS = [
     '/static/css/style.css',
     '/static/js/app.js',
     '/static/manifest.json',
+    '/voting',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js'
 ];
+
+// --- IndexedDB wrapper ---
+const DB_NAME = 'votecouncil-offline';
+const DB_VERSION = 1;
+const STORE_NAME = 'pendingVotes';
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+            }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function addPendingVote(url, body) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).add({ url, body, timestamp: Date.now() });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+async function getAllPendingVotes() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const req = tx.objectStore(STORE_NAME).getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function deletePendingVote(id) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).delete(id);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+// --- Service Worker events ---
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
@@ -39,17 +91,30 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Fetch event - network first, fallback to cache
+// Fetch event
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // Skip non-GET requests
+    // Handle POST requests to /voting/mark/* - queue offline if fetch fails
+    if (request.method === 'POST' && url.pathname.match(/^\/voting\/mark\//)) {
+        event.respondWith(handleVoteMark(request));
+        return;
+    }
+
+    // Skip other non-GET requests
     if (request.method !== 'GET') {
         return;
     }
 
-    // For API requests, always try network first
+    // For static assets and CDN resources, use cache-first
+    if (url.pathname.startsWith('/static/') ||
+        url.hostname === 'cdn.jsdelivr.net') {
+        event.respondWith(cacheFirst(request));
+        return;
+    }
+
+    // For API/data requests, use network-first
     if (url.pathname.startsWith('/api/') ||
         url.pathname.startsWith('/voters') ||
         url.pathname.startsWith('/boxes') ||
@@ -59,15 +124,43 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // For static assets, try cache first
-    if (url.pathname.startsWith('/static/')) {
-        event.respondWith(cacheFirst(request));
-        return;
-    }
-
-    // For HTML pages, try network first
+    // For HTML pages, use network-first
     event.respondWith(networkFirst(request));
 });
+
+// Handle vote mark POST - try network, queue offline on failure
+async function handleVoteMark(request) {
+    const clonedRequest = request.clone();
+    try {
+        const response = await fetch(request);
+        return response;
+    } catch (error) {
+        // Offline - store in IndexedDB for later sync
+        const body = await clonedRequest.json();
+        const url = clonedRequest.url;
+        await addPendingVote(url, body);
+
+        // Notify all clients about the pending vote so badges update
+        const clients = await self.clients.matchAll();
+        clients.forEach(client => {
+            client.postMessage({ type: 'vote-queued' });
+        });
+
+        // Register for background sync
+        if (self.registration.sync) {
+            await self.registration.sync.register('sync-vote-status');
+        }
+
+        // Return synthetic success so UI doesn't break
+        return new Response(
+            JSON.stringify({ status: 'queued', message: 'Saved offline - will sync when online' }),
+            {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            }
+        );
+    }
+}
 
 // Cache first strategy
 async function cacheFirst(request) {
@@ -135,17 +228,41 @@ async function networkFirst(request) {
     }
 }
 
-// Background sync for offline actions
+// Background sync - replay queued votes
 self.addEventListener('sync', (event) => {
     if (event.tag === 'sync-vote-status') {
-        event.waitUntil(syncVoteStatus());
+        event.waitUntil(syncPendingVotes());
     }
 });
 
-async function syncVoteStatus() {
-    // Get pending updates from IndexedDB
-    // Send to server when online
-    console.log('Syncing vote status updates...');
+async function syncPendingVotes() {
+    const pendingVotes = await getAllPendingVotes();
+    console.log(`Syncing ${pendingVotes.length} pending votes...`);
+
+    for (const vote of pendingVotes) {
+        try {
+            const response = await fetch(vote.url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(vote.body)
+            });
+
+            if (response.ok) {
+                await deletePendingVote(vote.id);
+                console.log(`Synced vote ${vote.id}`);
+            }
+        } catch (error) {
+            console.error(`Failed to sync vote ${vote.id}:`, error);
+            // Stop trying if still offline
+            break;
+        }
+    }
+
+    // Notify clients that sync is done
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => {
+        client.postMessage({ type: 'sync-complete' });
+    });
 }
 
 // Push notifications (future feature)

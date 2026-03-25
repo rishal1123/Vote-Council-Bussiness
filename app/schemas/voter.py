@@ -50,6 +50,12 @@ class VoterStatusUpdate(BaseModel):
     voted_for: Optional[str] = None
 
 
+class BulkStatusUpdate(BaseModel):
+    voter_ids: List[int]
+    vote_status: VoteStatus
+    voted_for: Optional[str] = None
+
+
 class FocalBrief(BaseModel):
     id: int
     name: str
@@ -73,6 +79,7 @@ class VoterResponse(VoterBase):
     box: Optional[BoxBrief] = None
     vote_status: VoteStatus
     voted_for: Optional[str] = None
+    voted_at: Optional[datetime] = None
     focals: List[FocalBrief] = []
     created_at: datetime
     updated_at: datetime
@@ -85,6 +92,8 @@ class VoterListResponse(BaseModel):
     id: int
     name: str
     voter_id: Optional[str] = None
+    national_id: Optional[str] = None
+    photo_path: Optional[str] = None
     box: Optional[BoxBrief] = None
     is_pledged: PledgeStatus
     vote_status: VoteStatus

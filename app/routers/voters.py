@@ -1,5 +1,9 @@
+import csv
+import io
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Query
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
@@ -9,7 +13,8 @@ from app.models import Voter, Box, Focal, User
 from app.models.voter import VoteStatus, PledgeStatus
 from app.models.user import UserRole
 from app.schemas.voter import (
-    VoterCreate, VoterUpdate, VoterResponse, VoterListResponse, VoterStatusUpdate
+    VoterCreate, VoterUpdate, VoterResponse, VoterListResponse, VoterStatusUpdate,
+    BulkStatusUpdate
 )
 from app.services.auth import get_current_user_required, require_role
 from app.services.photo import save_photo, delete_photo
@@ -28,6 +33,114 @@ async def voters_list_page(
     return templates.TemplateResponse(
         "voters/list.html",
         {"request": request, "user": user}
+    )
+
+
+@router.get("/print", response_class=HTMLResponse)
+async def voters_print_page(
+    request: Request,
+    box_id: Optional[int] = Query(None),
+    focal_id: Optional[int] = Query(None),
+    vote_status: Optional[VoteStatus] = Query(None),
+    is_pledged: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user_required)
+):
+    """Render print-friendly voter list."""
+    query = db.query(Voter).options(
+        joinedload(Voter.box),
+        joinedload(Voter.focals)
+    )
+
+    filter_label = "All Voters"
+    if box_id:
+        query = query.filter(Voter.box_id == box_id)
+        box = db.query(Box).filter(Box.id == box_id).first()
+        if box:
+            filter_label = f"Box: {box.name}"
+    if focal_id:
+        query = query.join(Voter.focals).filter(Focal.id == focal_id)
+        focal_obj = db.query(Focal).filter(Focal.id == focal_id).first()
+        if focal_obj:
+            filter_label = f"Focal: {focal_obj.name}"
+    if vote_status:
+        query = query.filter(Voter.vote_status == vote_status)
+    if is_pledged is not None:
+        try:
+            query = query.filter(Voter.is_pledged == PledgeStatus(is_pledged))
+        except ValueError:
+            pass
+
+    voters = query.order_by(Voter.name).all()
+
+    return templates.TemplateResponse(
+        "voters/print.html",
+        {
+            "request": request,
+            "voters": voters,
+            "filter_label": filter_label,
+            "voter_count": len(voters),
+            "print_date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        }
+    )
+
+
+@router.get("/export/pdf", response_class=HTMLResponse)
+async def voters_export_pdf(
+    request: Request,
+    search: Optional[str] = Query(None),
+    box_id: Optional[int] = Query(None),
+    focal_id: Optional[int] = Query(None),
+    vote_status: Optional[VoteStatus] = Query(None),
+    is_pledged: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user_required)
+):
+    """Render PDF-ready voter list (use browser Save as PDF)."""
+    query = db.query(Voter).options(
+        joinedload(Voter.box),
+        joinedload(Voter.focals)
+    )
+
+    filter_label = "All Voters"
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            (Voter.name.ilike(search_term)) |
+            (Voter.voter_id.ilike(search_term)) |
+            (Voter.national_id.ilike(search_term)) |
+            (Voter.contact.ilike(search_term))
+        )
+        filter_label = f"Search: {search}"
+    if box_id:
+        query = query.filter(Voter.box_id == box_id)
+        box = db.query(Box).filter(Box.id == box_id).first()
+        if box:
+            filter_label = f"Box: {box.name}"
+    if focal_id:
+        query = query.join(Voter.focals).filter(Focal.id == focal_id)
+        focal_obj = db.query(Focal).filter(Focal.id == focal_id).first()
+        if focal_obj:
+            filter_label = f"Focal: {focal_obj.name}"
+    if vote_status:
+        query = query.filter(Voter.vote_status == vote_status)
+    if is_pledged is not None:
+        try:
+            query = query.filter(Voter.is_pledged == PledgeStatus(is_pledged))
+        except ValueError:
+            pass
+
+    voters = query.order_by(Voter.name).all()
+
+    return templates.TemplateResponse(
+        "voters/pdf.html",
+        {
+            "request": request,
+            "voters": voters,
+            "filter_label": filter_label,
+            "voter_count": len(voters),
+            "print_date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        }
     )
 
 
@@ -102,6 +215,7 @@ async def list_voters(
         query = query.filter(
             (Voter.name.ilike(search_term)) |
             (Voter.voter_id.ilike(search_term)) |
+            (Voter.national_id.ilike(search_term)) |
             (Voter.contact.ilike(search_term))
         )
 
@@ -128,6 +242,8 @@ async def list_voters(
             id=v.id,
             name=v.name,
             voter_id=v.voter_id,
+            national_id=v.national_id,
+            photo_path=v.photo_path,
             box={"id": v.box.id, "name": v.box.name} if v.box else None,
             is_pledged=v.is_pledged,
             vote_status=v.vote_status,
@@ -156,6 +272,7 @@ async def count_voters(
         query = query.filter(
             (Voter.name.ilike(search_term)) |
             (Voter.voter_id.ilike(search_term)) |
+            (Voter.national_id.ilike(search_term)) |
             (Voter.contact.ilike(search_term))
         )
 
@@ -175,6 +292,82 @@ async def count_voters(
             pass
 
     return {"count": query.count()}
+
+
+@router.get("/export/csv")
+async def export_voters_csv(
+    search: Optional[str] = Query(None),
+    box_id: Optional[int] = Query(None),
+    focal_id: Optional[int] = Query(None),
+    vote_status: Optional[VoteStatus] = Query(None),
+    is_pledged: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user_required)
+):
+    """Export filtered voters as CSV."""
+    query = db.query(Voter).options(
+        joinedload(Voter.box),
+        joinedload(Voter.focals)
+    )
+
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            (Voter.name.ilike(search_term)) |
+            (Voter.voter_id.ilike(search_term)) |
+            (Voter.national_id.ilike(search_term)) |
+            (Voter.contact.ilike(search_term))
+        )
+
+    if box_id:
+        query = query.filter(Voter.box_id == box_id)
+
+    if focal_id:
+        query = query.join(Voter.focals).filter(Focal.id == focal_id)
+
+    if vote_status:
+        query = query.filter(Voter.vote_status == vote_status)
+
+    if is_pledged is not None:
+        try:
+            query = query.filter(Voter.is_pledged == PledgeStatus(is_pledged))
+        except ValueError:
+            pass
+
+    voters = query.order_by(Voter.name).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "EC#", "#", "ID", "Name", "Gender", "Age", "Party",
+        "Address", "Contact", "New Contact", "Previous Island",
+        "Previous Address", "Current Location", "Box", "Box#",
+        "Zone", "Focal(s)", "Focal Comment", "Remarks",
+        "Pledged", "Vote Status", "Voted For", "Voted At"
+    ])
+
+    for v in voters:
+        focals = ", ".join(f.name for f in v.focals) if v.focals else ""
+        writer.writerow([
+            v.ec_number or "", v.voter_id or "", v.national_id or "",
+            v.name, v.gender or "", v.age or "", v.party or "",
+            v.address or "", v.contact or "", v.new_contact or "",
+            v.previous_island or "", v.previous_address or "",
+            v.current_location or "",
+            v.box.name if v.box else "", v.box_number or "",
+            v.zone or "", focals, v.focal_comment or "", v.remarks or "",
+            v.is_pledged.value.title() if v.is_pledged else "No",
+            v.vote_status.value.replace("_", " ").title(),
+            v.voted_for or "",
+            v.voted_at.strftime("%Y-%m-%d %H:%M:%S") if v.voted_at else ""
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=voters_filtered.csv"}
+    )
 
 
 @router.get("/{voter_id}", response_model=VoterResponse)
@@ -213,6 +406,7 @@ async def get_voter(
         is_pledged=voter.is_pledged,
         vote_status=voter.vote_status,
         voted_for=voter.voted_for,
+        voted_at=voter.voted_at,
         focals=[{"id": f.id, "name": f.name} for f in voter.focals],
         created_at=voter.created_at,
         updated_at=voter.updated_at
@@ -330,9 +524,16 @@ async def update_vote_status(
     if not voter:
         raise HTTPException(status_code=404, detail="Voter not found")
 
+    old_status = voter.vote_status
     voter.vote_status = status_data.vote_status
     if status_data.voted_for:
         voter.voted_for = status_data.voted_for
+
+    # Track vote timestamp
+    if status_data.vote_status != VoteStatus.not_voted and old_status == VoteStatus.not_voted:
+        voter.voted_at = datetime.utcnow()
+    elif status_data.vote_status == VoteStatus.not_voted:
+        voter.voted_at = None
 
     db.commit()
 
@@ -345,22 +546,81 @@ async def update_vote_status(
 
 @router.post("/bulk-status")
 async def bulk_update_status(
-    voter_ids: List[int],
-    status_data: VoterStatusUpdate,
+    bulk_data: BulkStatusUpdate,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(UserRole.admin, UserRole.operator))
 ):
     """Bulk update vote status for multiple voters."""
-    update_count = db.query(Voter).filter(Voter.id.in_(voter_ids)).update(
-        {
-            Voter.vote_status: status_data.vote_status,
-            Voter.voted_for: status_data.voted_for
-        },
-        synchronize_session=False
-    )
+    voters = db.query(Voter).filter(Voter.id.in_(bulk_data.voter_ids)).all()
+
+    for voter in voters:
+        old_status = voter.vote_status
+        voter.vote_status = bulk_data.vote_status
+        if bulk_data.voted_for:
+            voter.voted_for = bulk_data.voted_for
+
+        # Track vote timestamp (same logic as single status update)
+        if bulk_data.vote_status != VoteStatus.not_voted and old_status == VoteStatus.not_voted:
+            voter.voted_at = datetime.utcnow()
+        elif bulk_data.vote_status == VoteStatus.not_voted:
+            voter.voted_at = None
+
     db.commit()
 
-    return {"message": f"Updated {update_count} voters"}
+    return {"message": f"Updated {len(voters)} voters"}
+
+
+from pydantic import BaseModel as PydanticBaseModel
+
+
+class PledgeUpdate(PydanticBaseModel):
+    is_pledged: str
+
+
+class BulkPledgeUpdate(PydanticBaseModel):
+    voter_ids: List[int]
+    is_pledged: str
+
+
+@router.patch("/{voter_id}/pledge")
+async def update_pledge_status(
+    voter_id: int,
+    data: PledgeUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(UserRole.admin))
+):
+    """Update a voter's pledge status (admin only)."""
+    voter = db.query(Voter).filter(Voter.id == voter_id).first()
+    if not voter:
+        raise HTTPException(status_code=404, detail="Voter not found")
+
+    try:
+        voter.is_pledged = PledgeStatus(data.is_pledged)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid pledge status")
+
+    db.commit()
+    return {"message": "Pledge status updated", "is_pledged": voter.is_pledged.value}
+
+
+@router.post("/bulk-pledge")
+async def bulk_update_pledge(
+    data: BulkPledgeUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(UserRole.admin))
+):
+    """Bulk update pledge status for multiple voters (admin only)."""
+    try:
+        pledge_status = PledgeStatus(data.is_pledged)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid pledge status")
+
+    voters = db.query(Voter).filter(Voter.id.in_(data.voter_ids)).all()
+    for voter in voters:
+        voter.is_pledged = pledge_status
+
+    db.commit()
+    return {"message": f"Updated pledge status for {len(voters)} voters"}
 
 
 @router.delete("/{voter_id}")

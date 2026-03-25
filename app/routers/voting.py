@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_  # kept for potential future use
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
 
 from app.database import get_db
 from app.models import User, Voter, Box, Candidate
@@ -92,6 +93,12 @@ async def mark_vote(
     old_status = voter.vote_status.value
     voter.vote_status = new_status
     voter.voted_for = data.voted_for if data.voted_for else None
+
+    # Track vote timestamp
+    if new_status != VoteStatus.not_voted and old_status == VoteStatus.not_voted.value:
+        voter.voted_at = datetime.utcnow()
+    elif new_status == VoteStatus.not_voted:
+        voter.voted_at = None
 
     db.commit()
 

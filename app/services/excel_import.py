@@ -169,7 +169,9 @@ def import_voters_from_excel(
         "boxes_created": 0,
         "focals_created": 0,
         "photos_imported": 0,
-        "errors": []
+        "duplicates": [],
+        "errors": [],
+        "warnings": []
     }
 
     rows, parse_errors, row_images = parse_excel(file_content, extract_photos=import_photos)
@@ -182,6 +184,7 @@ def import_voters_from_excel(
     # Cache for boxes and focals
     box_cache: Dict[str, Box] = {}
     focal_cache: Dict[str, Focal] = {}
+    seen_national_ids: Dict[str, int] = {}  # Track national IDs seen in this import
 
     # Pre-load existing boxes and focals
     for box in db.query(Box).all():
@@ -194,9 +197,31 @@ def import_voters_from_excel(
         try:
             # Extract voter data
             name = row.get("Name") or row.get("name")
-            if not name:
+            if not name or not str(name).strip():
                 stats["skipped"] += 1
+                stats["errors"].append(f"Row {row_num}: Name is empty, skipping row")
                 continue
+
+            # Validate age if present
+            raw_age = row.get("Age") or row.get("age")
+            if raw_age is not None:
+                try:
+                    age_val = int(raw_age)
+                    if age_val < 18 or age_val > 120:
+                        stats["warnings"].append({
+                            "row": row_num,
+                            "description": f"Age {age_val} is outside expected range (18-120) for voter '{str(name).strip()}'"
+                        })
+                except (ValueError, TypeError):
+                    pass
+
+            # Validate national ID not empty
+            raw_national_id = str(row.get("ID") or row.get("id") or "").strip()
+            if not raw_national_id:
+                stats["warnings"].append({
+                    "row": row_num,
+                    "description": f"National ID is empty for voter '{str(name).strip()}'"
+                })
 
             # EC # - Election Commission number
             ec_number = None
@@ -215,11 +240,30 @@ def import_voters_from_excel(
 
             # Check for duplicate national_id
             if national_id:
+                # Check duplicate within this file
+                if national_id in seen_national_ids:
+                    stats["skipped"] += 1
+                    stats["duplicates"].append({
+                        "row": row_num,
+                        "national_id": national_id,
+                        "name": str(name).strip(),
+                        "reason": f"Duplicate in file (first seen in row {seen_national_ids[national_id]})"
+                    })
+                    continue
+
+                # Check duplicate in database
                 existing = db.query(Voter).filter(Voter.national_id == national_id).first()
                 if existing:
                     stats["skipped"] += 1
-                    stats["errors"].append(f"Row {row_num}: Duplicate national ID '{national_id}'")
+                    stats["duplicates"].append({
+                        "row": row_num,
+                        "national_id": national_id,
+                        "name": str(name).strip(),
+                        "reason": f"Already exists in database as '{existing.name}'"
+                    })
                     continue
+
+                seen_national_ids[national_id] = row_num
 
             # Get or create box
             box = None

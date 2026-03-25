@@ -4,7 +4,7 @@ from pathlib import Path
 
 class Settings(BaseSettings):
     APP_NAME: str = "VoteCouncil"
-    DEBUG: bool = True
+    DEBUG: bool = False
 
     # Database
     DATABASE_URL: str = "sqlite:///./votecouncil.db"

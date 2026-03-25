@@ -23,7 +23,7 @@
                         <tr>
                             <th>Number</th>
                             <th>Name</th>
-                            <th>Party</th>
+                            <th class="d-none d-md-table-cell">Party</th>
                             <th class="text-center">Pledged</th>
                             {% if user.role.value == 'admin' %}
                             <th class="text-center">Actions</th>
@@ -116,16 +116,16 @@ function renderCandidates() {
         <tr class="${c.is_pledged ? 'table-success' : ''}">
             <td><strong>${c.number || '-'}</strong></td>
             <td>${c.name}</td>
-            <td>${c.party || '-'}</td>
+            <td class="d-none d-md-table-cell">${c.party || '-'}</td>
             <td class="text-center">
                 ${c.is_pledged ? '<i class="bi bi-star-fill text-warning"></i> Pledged' : '-'}
             </td>
             ${isAdmin ? `
             <td class="text-center">
-                <button class="btn btn-sm btn-outline-primary" onclick="showEditModal(${c.id})">
+                <button class="btn btn-sm btn-outline-primary" style="min-height:38px" onclick="showEditModal(${c.id})">
                     <i class="bi bi-pencil"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-danger" onclick="deleteCandidate(${c.id})">
+                <button class="btn btn-sm btn-outline-danger" style="min-height:38px" onclick="deleteCandidate(${c.id})">
                     <i class="bi bi-trash"></i>
                 </button>
             </td>

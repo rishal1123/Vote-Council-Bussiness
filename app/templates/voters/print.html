@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voter List - Print</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 20px;
+            color: #000;
+        }
+        h1 {
+            font-size: 18px;
+            margin: 0 0 4px 0;
+        }
+        .header-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 8px;
+        }
+        .header-info span {
+            font-size: 11px;
+            color: #555;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #999;
+            padding: 4px 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #eee;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        td {
+            font-size: 12px;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .checkbox-col {
+            width: 40px;
+            text-align: center;
+        }
+        .checkbox-box {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 1.5px solid #333;
+            vertical-align: middle;
+        }
+        .no-print {
+            margin-bottom: 16px;
+        }
+        .no-print button {
+            padding: 8px 24px;
+            font-size: 14px;
+            cursor: pointer;
+            background: #0d6efd;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            margin-right: 8px;
+        }
+        .no-print button.secondary {
+            background: #6c757d;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                margin: 10px;
+            }
+            tr:nth-child(even) {
+                background-color: #f9f9f9 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            th {
+                background-color: #eee !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button onclick="window.print()">Print</button>
+        <button class="secondary" onclick="window.close()">Close</button>
+    </div>
+
+    <div class="header-info">
+        <div>
+            <h1>{{ filter_label }}</h1>
+            <span>Total: {{ voter_count }} voters</span>
+        </div>
+        <span>Printed: {{ print_date }}</span>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>National ID</th>
+                <th>Contact</th>
+                <th class="text-center">Pledged</th>
+                <th class="text-center">Vote Status</th>
+                <th class="checkbox-col">Check</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for voter in voters %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ voter.name }}</td>
+                <td>{{ voter.national_id or '-' }}</td>
+                <td>{{ voter.contact or '-' }}</td>
+                <td class="text-center">
+                    {% if voter.is_pledged and voter.is_pledged.value == 'yes' %}Yes
+                    {% elif voter.is_pledged and voter.is_pledged.value == 'undecided' %}?
+                    {% else %}No{% endif %}
+                </td>
+                <td class="text-center">
+                    {% if voter.vote_status %}{{ voter.vote_status.value | replace('_', ' ') | title }}{% else %}Not Voted{% endif %}
+                </td>
+                <td class="checkbox-col"><span class="checkbox-box"></span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
