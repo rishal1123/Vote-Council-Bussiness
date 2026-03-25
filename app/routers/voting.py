@@ -44,7 +44,7 @@ async def search_voters_by_box(
     query = q.strip()
 
     voters = db.query(Voter).filter(
-        Voter.box_number.ilike(f"%{query}%")
+        Voter.box_number == query
     ).order_by(Voter.name).all()
 
     if not voters:
