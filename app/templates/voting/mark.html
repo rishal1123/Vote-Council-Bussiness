@@ -187,6 +187,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const response = await fetch('/candidates');
     candidates = await response.json();
 
+    // Restore saved box prefix from localStorage
+    const savedPrefix = localStorage.getItem('votecouncil_box_prefix');
+    if (savedPrefix) {
+        document.getElementById('boxPrefix').value = savedPrefix;
+    }
+
+    // Save prefix on change
+    document.getElementById('boxPrefix').addEventListener('input', () => {
+        localStorage.setItem('votecouncil_box_prefix', document.getElementById('boxPrefix').value);
+    });
+
     // Enter key to search on both inputs
     document.getElementById('searchInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') searchVoters();
