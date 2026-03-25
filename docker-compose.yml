@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  votecouncil:
+    build: .
+    container_name: votecouncil
+    ports:
+      - "8000:8000"
+    volumes:
+      - db-data:/app/data
+      - uploads:/app/uploads
+    environment:
+      - DATABASE_URL=sqlite:///data/votecouncil.db
+      - SECRET_KEY=change-this-in-production
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  uploads:
