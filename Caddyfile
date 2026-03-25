@@ -1,0 +1,21 @@
+# Replace :443 with your domain (e.g. vote.example.com) for automatic SSL
+# Using :443 serves with Caddy's self-signed cert for testing
+:443 {
+    reverse_proxy votecouncil:8000
+
+    # Security headers (Caddy adds some by default, these supplement)
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # Gzip compression
+    encode gzip
+
+    # Access logs
+    log {
+        output stdout
+    }
+}
