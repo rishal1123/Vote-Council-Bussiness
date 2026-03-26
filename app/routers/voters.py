@@ -18,6 +18,7 @@ from app.schemas.voter import (
 )
 from app.services.auth import get_current_user_required, require_role
 from app.services.photo import save_photo, delete_photo
+from app.services.settings import get_visible_columns
 
 router = APIRouter(prefix="/voters", tags=["Voters"])
 templates = Jinja2Templates(directory="app/templates")
@@ -81,6 +82,7 @@ async def voters_print_page(
             "filter_label": filter_label,
             "voter_count": len(voters),
             "print_date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "visible": get_visible_columns("print"),
         }
     )
 
@@ -140,6 +142,7 @@ async def voters_export_pdf(
             "filter_label": filter_label,
             "voter_count": len(voters),
             "print_date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "visible": get_visible_columns("pdf"),
         }
     )
 
@@ -169,7 +172,7 @@ async def voter_detail_page(
         raise HTTPException(status_code=404, detail="Voter not found")
     return templates.TemplateResponse(
         "voters/detail.html",
-        {"request": request, "user": user, "voter": voter}
+        {"request": request, "user": user, "voter": voter, "visible": get_visible_columns("detail")}
     )
 
 

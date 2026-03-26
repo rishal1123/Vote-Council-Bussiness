@@ -27,50 +27,52 @@
                         <div class="col-md-6">
                             <h3 class="mb-1">{{ voter.name }}</h3>
                             <p class="text-muted mb-0">
-                                {% if voter.ec_number %}EC#: {{ voter.ec_number }}{% endif %}
-                                {% if voter.voter_id %} | #{{ voter.voter_id }}{% endif %}
-                                {% if voter.national_id %} | ID: {{ voter.national_id }}{% endif %}
-                                {% if voter.gender %} | {{ voter.gender }}{% endif %}
-                                {% if voter.age %} | {{ voter.age }} years{% endif %}
+                                {% if 'ec_number' in visible and voter.ec_number %}EC#: {{ voter.ec_number }}{% endif %}
+                                {% if 'voter_id' in visible and voter.voter_id %} | #{{ voter.voter_id }}{% endif %}
+                                {% if 'national_id' in visible and voter.national_id %} | ID: {{ voter.national_id }}{% endif %}
+                                {% if 'gender' in visible and voter.gender %} | {{ voter.gender }}{% endif %}
+                                {% if 'age' in visible and voter.age %} | {{ voter.age }} years{% endif %}
                             </p>
                         </div>
+                        {% if 'pledged' in visible %}
                         <div class="col-md-6 text-md-end">
                             <span class="badge {% if voter.is_pledged.value == 'yes' %}bg-success{% elif voter.is_pledged.value == 'undecided' %}bg-warning{% else %}bg-secondary{% endif %} fs-6">
                                 {% if voter.is_pledged.value == 'yes' %}Pledged{% elif voter.is_pledged.value == 'undecided' %}Undecided{% else %}Not Pledged{% endif %}
                             </span>
                         </div>
+                        {% endif %}
                     </div>
 
                     <hr>
 
                     <div class="row">
                         <div class="col-md-6">
-                            <p><strong>Party:</strong> {{ voter.party or '-' }}</p>
-                            <p><strong>Box:</strong> {{ voter.box.name if voter.box else '-' }}</p>
-                            <p><strong>Box#:</strong> {{ voter.box_number or '-' }}</p>
-                            <p><strong>Zone:</strong> {{ voter.zone or '-' }}</p>
+                            {% if 'party' in visible %}<p><strong>Party:</strong> {{ voter.party or '-' }}</p>{% endif %}
+                            {% if 'box' in visible %}<p><strong>Box:</strong> {{ voter.box.name if voter.box else '-' }}</p>{% endif %}
+                            {% if 'box_number' in visible %}<p><strong>Box#:</strong> {{ voter.box_number or '-' }}</p>{% endif %}
+                            {% if 'zone' in visible %}<p><strong>Zone:</strong> {{ voter.zone or '-' }}</p>{% endif %}
                         </div>
                         <div class="col-md-6">
-                            <p><strong>Contact:</strong> {{ voter.contact or '-' }}</p>
-                            <p><strong>New Contact:</strong> {{ voter.new_contact or '-' }}</p>
-                            <p><strong>Address:</strong> {{ voter.address or '-' }}</p>
+                            {% if 'contact' in visible %}<p><strong>Contact:</strong> {{ voter.contact or '-' }}</p>{% endif %}
+                            {% if 'new_contact' in visible %}<p><strong>New Contact:</strong> {{ voter.new_contact or '-' }}</p>{% endif %}
+                            {% if 'address' in visible %}<p><strong>Address:</strong> {{ voter.address or '-' }}</p>{% endif %}
                         </div>
                     </div>
 
-                    {% if voter.previous_island or voter.previous_address or voter.current_location %}
+                    {% if ('previous_island' in visible or 'previous_address' in visible or 'current_location' in visible) and (voter.previous_island or voter.previous_address or voter.current_location) %}
                     <hr>
                     <div class="row">
                         <div class="col-md-6">
-                            <p><strong>Previous Island:</strong> {{ voter.previous_island or '-' }}</p>
-                            <p><strong>Previous Address:</strong> {{ voter.previous_address or '-' }}</p>
+                            {% if 'previous_island' in visible %}<p><strong>Previous Island:</strong> {{ voter.previous_island or '-' }}</p>{% endif %}
+                            {% if 'previous_address' in visible %}<p><strong>Previous Address:</strong> {{ voter.previous_address or '-' }}</p>{% endif %}
                         </div>
                         <div class="col-md-6">
-                            <p><strong>Current Location:</strong> {{ voter.current_location or '-' }}</p>
+                            {% if 'current_location' in visible %}<p><strong>Current Location:</strong> {{ voter.current_location or '-' }}</p>{% endif %}
                         </div>
                     </div>
                     {% endif %}
 
-                    {% if voter.focals %}
+                    {% if 'focals' in visible and voter.focals %}
                     <hr>
                     <p><strong>Assigned Focals:</strong></p>
                     <div>
@@ -80,13 +82,13 @@
                     </div>
                     {% endif %}
 
-                    {% if voter.focal_comment %}
+                    {% if 'focal_comment' in visible and voter.focal_comment %}
                     <hr>
                     <p><strong>Focal Comment:</strong></p>
                     <p class="text-muted">{{ voter.focal_comment }}</p>
                     {% endif %}
 
-                    {% if voter.remarks %}
+                    {% if 'remarks' in visible and voter.remarks %}
                     <hr>
                     <p><strong>Remarks:</strong></p>
                     <p class="text-muted">{{ voter.remarks }}</p>
@@ -98,6 +100,7 @@
         <!-- Status & Photo Card -->
         <div class="col-md-4">
             <!-- Photo -->
+            {% if 'photo' in visible %}
             <div class="card mb-4">
                 <div class="card-body text-center">
                     {% if voter.photo_path %}
@@ -118,8 +121,10 @@
                     {% endif %}
                 </div>
             </div>
+            {% endif %}
 
             <!-- Vote Status -->
+            {% if 'vote_status' in visible %}
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0"><i class="bi bi-clipboard-check"></i> Vote Status</h5>
@@ -161,6 +166,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 </div>

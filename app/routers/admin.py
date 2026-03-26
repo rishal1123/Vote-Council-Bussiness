@@ -12,6 +12,7 @@ from app.models.user import UserRole
 from app.models.voter import voter_focal
 from app.services.auth import require_role
 from app.services.logging import log_activity, Actions
+from app.services.settings import get_column_settings, save_column_settings, DEFAULT_COLUMNS
 from app.config import settings
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -77,6 +78,51 @@ async def get_logs(
             for log in logs
         ]
     }
+
+
+@router.get("/settings", response_class=HTMLResponse)
+async def settings_page(
+    request: Request,
+    user: User = Depends(require_role(UserRole.admin))
+):
+    """Render display settings page."""
+    return templates.TemplateResponse(
+        "admin/settings.html",
+        {"request": request, "user": user}
+    )
+
+
+@router.get("/settings/columns")
+async def get_columns_settings(
+    user: User = Depends(require_role(UserRole.admin))
+):
+    """Get current column visibility settings."""
+    return get_column_settings()
+
+
+@router.post("/settings")
+async def save_settings(
+    request: Request,
+    user: User = Depends(require_role(UserRole.admin))
+):
+    """Save column visibility settings."""
+    data = await request.json()
+    # Ensure 'name' is always visible
+    if "name" in data:
+        data["name"]["print"] = True
+        data["name"]["pdf"] = True
+        data["name"]["detail"] = True
+    save_column_settings(data)
+    return {"message": "Settings saved"}
+
+
+@router.post("/settings/reset")
+async def reset_settings(
+    user: User = Depends(require_role(UserRole.admin))
+):
+    """Reset column visibility settings to defaults."""
+    save_column_settings(DEFAULT_COLUMNS.copy())
+    return {"message": "Settings reset to defaults"}
 
 
 @router.get("/reset", response_class=HTMLResponse)

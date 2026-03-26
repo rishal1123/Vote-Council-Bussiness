@@ -160,20 +160,35 @@
         <thead>
             <tr>
                 <th style="width:30px">#</th>
-                <th style="width:35px"></th>
-                <th>Name</th>
-                <th>National ID</th>
-                <th>Box</th>
-                <th>Contact</th>
-                <th>Focal(s)</th>
-                <th style="text-align:center">Pledged</th>
-                <th style="text-align:center">Vote Status</th>
+                {% if 'photo' in visible %}<th style="width:35px"></th>{% endif %}
+                {% if 'ec_number' in visible %}<th>EC#</th>{% endif %}
+                {% if 'name' in visible %}<th>Name</th>{% endif %}
+                {% if 'voter_id' in visible %}<th>ID#</th>{% endif %}
+                {% if 'national_id' in visible %}<th>National ID</th>{% endif %}
+                {% if 'gender' in visible %}<th>Gender</th>{% endif %}
+                {% if 'age' in visible %}<th>Age</th>{% endif %}
+                {% if 'party' in visible %}<th>Party</th>{% endif %}
+                {% if 'address' in visible %}<th>Address</th>{% endif %}
+                {% if 'box' in visible %}<th>Box</th>{% endif %}
+                {% if 'box_number' in visible %}<th>Box#</th>{% endif %}
+                {% if 'zone' in visible %}<th>Zone</th>{% endif %}
+                {% if 'contact' in visible %}<th>Contact</th>{% endif %}
+                {% if 'new_contact' in visible %}<th>New Contact</th>{% endif %}
+                {% if 'previous_island' in visible %}<th>Previous Island</th>{% endif %}
+                {% if 'previous_address' in visible %}<th>Previous Address</th>{% endif %}
+                {% if 'current_location' in visible %}<th>Current Location</th>{% endif %}
+                {% if 'focals' in visible %}<th>Focal(s)</th>{% endif %}
+                {% if 'focal_comment' in visible %}<th>Focal Comment</th>{% endif %}
+                {% if 'remarks' in visible %}<th>Remarks</th>{% endif %}
+                {% if 'pledged' in visible %}<th style="text-align:center">Pledged</th>{% endif %}
+                {% if 'vote_status' in visible %}<th style="text-align:center">Vote Status</th>{% endif %}
             </tr>
         </thead>
         <tbody>
             {% for voter in voters %}
             <tr>
                 <td>{{ loop.index }}</td>
+                {% if 'photo' in visible %}
                 <td>
                     {% if voter.photo_path %}
                     <img src="/uploads/{{ voter.photo_path }}" class="photo" alt="">
@@ -181,16 +196,36 @@
                     <div class="photo-placeholder">-</div>
                     {% endif %}
                 </td>
+                {% endif %}
+                {% if 'ec_number' in visible %}<td>{{ voter.ec_number or '-' }}</td>{% endif %}
+                {% if 'name' in visible %}
                 <td>
                     <span class="voter-name">{{ voter.name }}</span>
                 </td>
-                <td><span class="voter-id">{{ voter.national_id or '-' }}</span></td>
-                <td>{{ voter.box.name if voter.box else '-' }}</td>
-                <td>{{ voter.contact or '-' }}</td>
+                {% endif %}
+                {% if 'voter_id' in visible %}<td><span class="voter-id">{{ voter.voter_id or '-' }}</span></td>{% endif %}
+                {% if 'national_id' in visible %}<td><span class="voter-id">{{ voter.national_id or '-' }}</span></td>{% endif %}
+                {% if 'gender' in visible %}<td>{{ voter.gender or '-' }}</td>{% endif %}
+                {% if 'age' in visible %}<td>{{ voter.age or '-' }}</td>{% endif %}
+                {% if 'party' in visible %}<td>{{ voter.party or '-' }}</td>{% endif %}
+                {% if 'address' in visible %}<td>{{ voter.address or '-' }}</td>{% endif %}
+                {% if 'box' in visible %}<td>{{ voter.box.name if voter.box else '-' }}</td>{% endif %}
+                {% if 'box_number' in visible %}<td>{{ voter.box_number or '-' }}</td>{% endif %}
+                {% if 'zone' in visible %}<td>{{ voter.zone or '-' }}</td>{% endif %}
+                {% if 'contact' in visible %}<td>{{ voter.contact or '-' }}</td>{% endif %}
+                {% if 'new_contact' in visible %}<td>{{ voter.new_contact or '-' }}</td>{% endif %}
+                {% if 'previous_island' in visible %}<td>{{ voter.previous_island or '-' }}</td>{% endif %}
+                {% if 'previous_address' in visible %}<td>{{ voter.previous_address or '-' }}</td>{% endif %}
+                {% if 'current_location' in visible %}<td>{{ voter.current_location or '-' }}</td>{% endif %}
+                {% if 'focals' in visible %}
                 <td>
                     {% for f in voter.focals %}{{ f.name }}{% if not loop.last %}, {% endif %}{% endfor %}
                     {% if not voter.focals %}-{% endif %}
                 </td>
+                {% endif %}
+                {% if 'focal_comment' in visible %}<td>{{ voter.focal_comment or '-' }}</td>{% endif %}
+                {% if 'remarks' in visible %}<td>{{ voter.remarks or '-' }}</td>{% endif %}
+                {% if 'pledged' in visible %}
                 <td style="text-align:center">
                     {% if voter.is_pledged.value == 'yes' %}
                     <span class="pledged-yes">Yes</span>
@@ -200,6 +235,8 @@
                     <span class="pledged-no">No</span>
                     {% endif %}
                 </td>
+                {% endif %}
+                {% if 'vote_status' in visible %}
                 <td style="text-align:center">
                     {% if voter.vote_status.value == 'voted_pledged' %}
                     <span class="badge badge-success">Voted Pledged</span>
@@ -211,6 +248,7 @@
                     <span class="badge badge-secondary">Not Voted</span>
                     {% endif %}
                 </td>
+                {% endif %}
             </tr>
             {% endfor %}
         </tbody>

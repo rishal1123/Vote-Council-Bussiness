@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Display Settings - VoteCouncil{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-2">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-sliders"></i> Display Settings
+        </h1>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary" onclick="saveSettings()">
+                <i class="bi bi-check-lg"></i> Save Settings
+            </button>
+            <button class="btn btn-outline-secondary" onclick="resetDefaults()">
+                <i class="bi bi-arrow-counterclockwise"></i> Reset Defaults
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Column Visibility</h5>
+            <small class="text-muted">Choose which columns appear on Print, PDF Export, and Voter Detail pages.</small>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Column Name</th>
+                            <th class="text-center" style="width: 100px;">Print</th>
+                            <th class="text-center" style="width: 100px;">PDF</th>
+                            <th class="text-center" style="width: 100px;">Detail (Profile)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="settingsTable">
+                        <tr>
+                            <td colspan="4" class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let columnSettings = {};
+
+document.addEventListener('DOMContentLoaded', loadSettings);
+
+async function loadSettings() {
+    try {
+        const response = await fetch('/admin/settings/columns');
+        columnSettings = await response.json();
+        renderTable();
+    } catch (error) {
+        showToast('Failed to load settings', 'danger');
+    }
+}
+
+function renderTable() {
+    const tbody = document.getElementById('settingsTable');
+    const keys = Object.keys(columnSettings);
+
+    tbody.innerHTML = keys.map(key => {
+        const col = columnSettings[key];
+        const isName = key === 'name';
+        return `
+            <tr>
+                <td><strong>${col.label}</strong> <small class="text-muted">(${key})</small></td>
+                <td class="text-center">
+                    <div class="form-check d-flex justify-content-center">
+                        <input class="form-check-input" type="checkbox"
+                            data-key="${key}" data-view="print"
+                            ${col.print ? 'checked' : ''}
+                            ${isName ? 'disabled' : ''}
+                            onchange="updateSetting('${key}', 'print', this.checked)">
+                    </div>
+                </td>
+                <td class="text-center">
+                    <div class="form-check d-flex justify-content-center">
+                        <input class="form-check-input" type="checkbox"
+                            data-key="${key}" data-view="pdf"
+                            ${col.pdf ? 'checked' : ''}
+                            ${isName ? 'disabled' : ''}
+                            onchange="updateSetting('${key}', 'pdf', this.checked)">
+                    </div>
+                </td>
+                <td class="text-center">
+                    <div class="form-check d-flex justify-content-center">
+                        <input class="form-check-input" type="checkbox"
+                            data-key="${key}" data-view="detail"
+                            ${col.detail ? 'checked' : ''}
+                            ${isName ? 'disabled' : ''}
+                            onchange="updateSetting('${key}', 'detail', this.checked)">
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function updateSetting(key, view, checked) {
+    if (columnSettings[key]) {
+        columnSettings[key][view] = checked;
+    }
+}
+
+async function saveSettings() {
+    try {
+        const response = await fetch('/admin/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(columnSettings)
+        });
+        const data = await response.json();
+        showToast(data.message || 'Settings saved', 'success');
+    } catch (error) {
+        showToast('Failed to save settings', 'danger');
+    }
+}
+
+async function resetDefaults() {
+    if (!confirm('Reset all column visibility settings to defaults?')) return;
+
+    try {
+        const response = await fetch('/admin/settings/reset', {
+            method: 'POST'
+        });
+        const data = await response.json();
+        showToast(data.message || 'Settings reset to defaults', 'success');
+        loadSettings();
+    } catch (error) {
+        showToast('Failed to reset settings', 'danger');
+    }
+}
+</script>
+{% endblock %}
