@@ -45,16 +45,16 @@ class Voter(Base):
     previous_island = Column(String(100), nullable=True)
     previous_address = Column(String(255), nullable=True)
     current_location = Column(String(255), nullable=True)
-    box_number = Column(String(20), nullable=True)  # Box# - e.g., "B2.1"
+    box_number = Column(String(20), nullable=True, index=True)  # Box# - e.g., "B2.1"
     zone = Column(String(50), nullable=True)
     focal_comment = Column(String(500), nullable=True)
     remarks = Column(String(500), nullable=True)  # Remarks column
 
     photo_path = Column(String(255), nullable=True)
-    box_id = Column(Integer, ForeignKey("boxes.id"), nullable=True)
-    is_pledged = Column(Enum(PledgeStatus), default=PledgeStatus.no)
-    vote_status = Column(Enum(VoteStatus), default=VoteStatus.not_voted)
-    voted_for = Column(String(100), nullable=True)  # Store name/info of who they voted for
+    box_id = Column(Integer, ForeignKey("boxes.id"), nullable=True, index=True)
+    is_pledged = Column(Enum(PledgeStatus), default=PledgeStatus.no, index=True)
+    vote_status = Column(Enum(VoteStatus), default=VoteStatus.not_voted, index=True)
+    voted_for = Column(String(100), nullable=True, index=True)
     voted_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

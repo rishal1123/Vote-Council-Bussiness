@@ -10,8 +10,8 @@ engine = create_engine(
         "check_same_thread": False,  # SQLite specific
         "timeout": 30,  # Wait up to 30s for locked database
     },
-    pool_size=20,  # Support 20 concurrent connections
-    max_overflow=10,  # Allow 10 extra connections under load
+    pool_size=5,  # Connections per worker (5 x 2 workers = 10 total)
+    max_overflow=15,  # Allow burst up to 20 per worker
     pool_pre_ping=True,  # Verify connections before use
     pool_recycle=300,  # Recycle connections every 5 minutes
 )
@@ -24,7 +24,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor.execute("PRAGMA journal_mode=WAL")  # Write-Ahead Logging for concurrent reads
     cursor.execute("PRAGMA busy_timeout=30000")  # 30s busy timeout
     cursor.execute("PRAGMA synchronous=NORMAL")  # Faster writes, still safe with WAL
-    cursor.execute("PRAGMA cache_size=-64000")  # 64MB cache
+    cursor.execute("PRAGMA cache_size=-16000")  # 16MB cache (suitable for 2GB RAM)
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
 

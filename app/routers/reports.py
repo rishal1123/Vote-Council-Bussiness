@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, case
 
 from app.database import get_db
 from app.models import User, Voter, Box, Focal, Candidate
@@ -110,39 +110,35 @@ async def get_box_report(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user_required)
 ):
-    """Get voting statistics by box."""
+    """Get voting statistics by box (optimized single query)."""
+    rows = db.query(
+        Voter.box_id,
+        func.count(Voter.id).label('total'),
+        func.sum(case((Voter.vote_status == VoteStatus.voted_pledged, 1), else_=0)).label('voted_pledged'),
+        func.sum(case((Voter.vote_status == VoteStatus.voted_other, 1), else_=0)).label('voted_other'),
+        func.sum(case((Voter.vote_status == VoteStatus.undecided, 1), else_=0)).label('undecided'),
+        func.sum(case((Voter.vote_status == VoteStatus.not_voted, 1), else_=0)).label('not_voted'),
+        func.sum(case((Voter.is_pledged == PledgeStatus.yes, 1), else_=0)).label('pledged_voters'),
+    ).group_by(Voter.box_id).all()
+
+    box_map = {row.box_id: row for row in rows}
     boxes = db.query(Box).all()
 
     data = []
     for box in boxes:
-        voters = db.query(Voter).filter(Voter.box_id == box.id)
-        total = voters.count()
-
-        if total == 0:
+        row = box_map.get(box.id)
+        if not row or row.total == 0:
             continue
-
-        voted_pledged = voters.filter(Voter.vote_status == VoteStatus.voted_pledged).count()
-        voted_other = voters.filter(Voter.vote_status == VoteStatus.voted_other).count()
-        undecided = voters.filter(Voter.vote_status == VoteStatus.undecided).count()
-        not_voted = voters.filter(Voter.vote_status == VoteStatus.not_voted).count()
-        pledged_voters = voters.filter(Voter.is_pledged == PledgeStatus.yes).count()
-
+        t, vp, vo, u, nv, pv = row.total, row.voted_pledged or 0, row.voted_other or 0, row.undecided or 0, row.not_voted or 0, row.pledged_voters or 0
         data.append({
-            "id": box.id,
-            "name": box.name,
-            "total": total,
-            "voted_pledged": voted_pledged,
-            "voted_other": voted_other,
-            "undecided": undecided,
-            "not_voted": not_voted,
-            "pledged_voters": pledged_voters,
-            "turnout_pct": round((total - not_voted) / total * 100, 1),
-            "pledged_conversion_pct": round(voted_pledged / pledged_voters * 100, 1) if pledged_voters > 0 else 0
+            "id": box.id, "name": box.name, "total": t,
+            "voted_pledged": vp, "voted_other": vo, "undecided": u, "not_voted": nv,
+            "pledged_voters": pv,
+            "turnout_pct": round((t - nv) / t * 100, 1),
+            "pledged_conversion_pct": round(vp / pv * 100, 1) if pv > 0 else 0
         })
 
-    # Sort by turnout
     data.sort(key=lambda x: x["turnout_pct"], reverse=True)
-
     return data
 
 
@@ -151,39 +147,38 @@ async def get_focal_report(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user_required)
 ):
-    """Get voting statistics by focal."""
+    """Get voting statistics by focal (optimized single query)."""
+    from app.models.voter import voter_focal
+
+    rows = db.query(
+        voter_focal.c.focal_id,
+        func.count(voter_focal.c.voter_id).label('total'),
+        func.sum(case((Voter.vote_status == VoteStatus.voted_pledged, 1), else_=0)).label('voted_pledged'),
+        func.sum(case((Voter.vote_status == VoteStatus.voted_other, 1), else_=0)).label('voted_other'),
+        func.sum(case((Voter.vote_status == VoteStatus.undecided, 1), else_=0)).label('undecided'),
+        func.sum(case((Voter.vote_status == VoteStatus.not_voted, 1), else_=0)).label('not_voted'),
+        func.sum(case((Voter.is_pledged == PledgeStatus.yes, 1), else_=0)).label('pledged_voters'),
+    ).join(Voter, Voter.id == voter_focal.c.voter_id
+    ).group_by(voter_focal.c.focal_id).all()
+
+    focal_map = {row.focal_id: row for row in rows}
     focals = db.query(Focal).all()
 
     data = []
-    for focal in focals:
-        voters = focal.voters
-        total = len(voters)
-
-        if total == 0:
+    for f in focals:
+        row = focal_map.get(f.id)
+        if not row or row.total == 0:
             continue
-
-        voted_pledged = sum(1 for v in voters if v.vote_status == VoteStatus.voted_pledged)
-        voted_other = sum(1 for v in voters if v.vote_status == VoteStatus.voted_other)
-        undecided = sum(1 for v in voters if v.vote_status == VoteStatus.undecided)
-        not_voted = sum(1 for v in voters if v.vote_status == VoteStatus.not_voted)
-        pledged_voters = sum(1 for v in voters if v.is_pledged == PledgeStatus.yes)
-
+        t, vp, vo, u, nv, pv = row.total, row.voted_pledged or 0, row.voted_other or 0, row.undecided or 0, row.not_voted or 0, row.pledged_voters or 0
         data.append({
-            "id": focal.id,
-            "name": focal.name,
-            "total": total,
-            "voted_pledged": voted_pledged,
-            "voted_other": voted_other,
-            "undecided": undecided,
-            "not_voted": not_voted,
-            "pledged_voters": pledged_voters,
-            "turnout_pct": round((total - not_voted) / total * 100, 1),
-            "pledged_conversion_pct": round(voted_pledged / pledged_voters * 100, 1) if pledged_voters > 0 else 0
+            "id": f.id, "name": f.name, "total": t,
+            "voted_pledged": vp, "voted_other": vo, "undecided": u, "not_voted": nv,
+            "pledged_voters": pv,
+            "turnout_pct": round((t - nv) / t * 100, 1),
+            "pledged_conversion_pct": round(vp / pv * 100, 1) if pv > 0 else 0
         })
 
-    # Sort by turnout
     data.sort(key=lambda x: x["turnout_pct"], reverse=True)
-
     return data
 
 

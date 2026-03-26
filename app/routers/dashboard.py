@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, case, literal_column
 from typing import Optional
 
 from app.database import get_db
@@ -44,17 +44,15 @@ async def dashboard_stats(
 ):
     """Get dashboard statistics."""
     focal = _get_focal_for_user(db, user)
-    return get_dashboard_stats(db, focal=focal)
+    stats = get_dashboard_stats(db, focal=focal)
+    db.close()  # Release connection immediately
+    return stats
 
 
 def get_dashboard_stats(db: Session, focal: Optional[Focal] = None) -> dict:
-    """Calculate all dashboard statistics.
-
-    If focal is provided, all voter queries are scoped to that focal's assigned voters.
-    """
+    """Calculate all dashboard statistics using optimized aggregate queries."""
 
     def _base_query():
-        """Return a base Voter query, filtered by focal if applicable."""
         q = db.query(Voter)
         if focal:
             q = q.join(voter_focal, Voter.id == voter_focal.c.voter_id).filter(
@@ -62,93 +60,100 @@ def get_dashboard_stats(db: Session, focal: Optional[Focal] = None) -> dict:
             )
         return q
 
-    # Total counts
-    total_voters = _base_query().count()
-    total_pledged = _base_query().filter(Voter.is_pledged == PledgeStatus.yes).count()
+    # Single aggregate query for all vote status counts + pledge count
+    stats_row = _base_query().with_entities(
+        func.count(Voter.id).label('total'),
+        func.sum(case((Voter.is_pledged == PledgeStatus.yes, 1), else_=0)).label('pledged'),
+        func.sum(case((Voter.vote_status == VoteStatus.not_voted, 1), else_=0)).label('not_voted'),
+        func.sum(case((Voter.vote_status == VoteStatus.voted_pledged, 1), else_=0)).label('voted_pledged'),
+        func.sum(case((Voter.vote_status == VoteStatus.voted_other, 1), else_=0)).label('voted_other'),
+        func.sum(case((Voter.vote_status == VoteStatus.undecided, 1), else_=0)).label('undecided'),
+    ).first()
 
-    # Vote status counts
-    not_voted = _base_query().filter(Voter.vote_status == VoteStatus.not_voted).count()
-    voted_pledged = _base_query().filter(Voter.vote_status == VoteStatus.voted_pledged).count()
-    voted_other = _base_query().filter(Voter.vote_status == VoteStatus.voted_other).count()
-    undecided = _base_query().filter(Voter.vote_status == VoteStatus.undecided).count()
-
+    total_voters = stats_row.total or 0
+    total_pledged = stats_row.pledged or 0
+    not_voted = stats_row.not_voted or 0
+    voted_pledged = stats_row.voted_pledged or 0
+    voted_other = stats_row.voted_other or 0
+    undecided = stats_row.undecided or 0
     total_voted = voted_pledged + voted_other + undecided
 
-    # Stats by box
-    box_stats = []
+    # Box stats - single aggregate query
+    box_query = _base_query().with_entities(
+        Voter.box_id,
+        func.count(Voter.id).label('total'),
+        func.sum(case((Voter.vote_status != VoteStatus.not_voted, 1), else_=0)).label('voted'),
+        func.sum(case((Voter.vote_status == VoteStatus.voted_pledged, 1), else_=0)).label('pledged_voted'),
+    ).group_by(Voter.box_id)
+
+    box_data = {row.box_id: row for row in box_query.all()}
     boxes = db.query(Box).all()
+    box_stats = []
     for box in boxes:
-        box_total = _base_query().filter(Voter.box_id == box.id).count()
-        if box_total == 0 and focal:
-            continue  # Skip boxes with no voters for this focal
-        box_voted = _base_query().filter(
-            Voter.box_id == box.id,
-            Voter.vote_status != VoteStatus.not_voted
-        ).count()
-        box_pledged_voted = _base_query().filter(
-            Voter.box_id == box.id,
-            Voter.vote_status == VoteStatus.voted_pledged
-        ).count()
+        row = box_data.get(box.id)
+        if not row:
+            if focal:
+                continue
+            box_stats.append({"id": box.id, "name": box.name, "total": 0, "voted": 0, "remaining": 0, "pledged_voted": 0, "percentage": 0})
+            continue
+        bt, bv, bp = row.total or 0, row.voted or 0, row.pledged_voted or 0
         box_stats.append({
-            "id": box.id,
-            "name": box.name,
-            "total": box_total,
-            "voted": box_voted,
-            "remaining": box_total - box_voted,
-            "pledged_voted": box_pledged_voted,
-            "percentage": round((box_voted / box_total * 100) if box_total > 0 else 0, 1)
+            "id": box.id, "name": box.name, "total": bt, "voted": bv,
+            "remaining": bt - bv, "pledged_voted": bp,
+            "percentage": round((bv / bt * 100) if bt > 0 else 0, 1)
         })
 
-    # Stats by focal (only for non-focal users)
+    # Focal stats - single aggregate query (only for non-focal users)
     focal_stats = []
     if not focal:
+        focal_rows = db.query(
+            voter_focal.c.focal_id,
+            func.count(voter_focal.c.voter_id).label('total'),
+            func.sum(case((Voter.vote_status != VoteStatus.not_voted, 1), else_=0)).label('voted'),
+            func.sum(case((Voter.vote_status == VoteStatus.voted_pledged, 1), else_=0)).label('pledged_voted'),
+        ).join(Voter, Voter.id == voter_focal.c.voter_id
+        ).group_by(voter_focal.c.focal_id).all()
+
+        focal_data = {row.focal_id: row for row in focal_rows}
         focals_list = db.query(Focal).all()
         for f in focals_list:
-            focal_voters = f.voters
-            focal_total = len(focal_voters)
-            focal_voted = sum(1 for v in focal_voters if v.vote_status != VoteStatus.not_voted)
-            focal_pledged_voted = sum(1 for v in focal_voters if v.vote_status == VoteStatus.voted_pledged)
+            row = focal_data.get(f.id)
+            ft = row.total if row else 0
+            fv = row.voted if row else 0
+            fp = row.pledged_voted if row else 0
             focal_stats.append({
-                "id": f.id,
-                "name": f.name,
-                "total": focal_total,
-                "voted": focal_voted,
-                "remaining": focal_total - focal_voted,
-                "pledged_voted": focal_pledged_voted,
-                "percentage": round((focal_voted / focal_total * 100) if focal_total > 0 else 0, 1)
+                "id": f.id, "name": f.name, "total": ft, "voted": fv,
+                "remaining": ft - fv, "pledged_voted": fp,
+                "percentage": round((fv / ft * 100) if ft > 0 else 0, 1)
             })
-        # Sort focal stats alphabetically by name
         focal_stats.sort(key=lambda x: x["name"])
 
-    # Get pledged candidate
+    # Pledged candidate
     pledged_candidate = db.query(Candidate).filter(Candidate.is_pledged == True).first()
 
-    # Candidate vote counts
-    candidate_stats = []
+    # Candidate vote counts - single aggregate query
+    candidate_rows = _base_query().with_entities(
+        Voter.voted_for, func.count(Voter.id)
+    ).filter(Voter.voted_for != None).group_by(Voter.voted_for).all()
+
+    vote_counts = {str(row[0]): row[1] for row in candidate_rows}
     candidates = db.query(Candidate).all()
-    for candidate in candidates:
-        vote_count = _base_query().filter(Voter.voted_for == str(candidate.id)).count()
+    candidate_stats = []
+    total_with_candidate = 0
+    for c in candidates:
+        count = vote_counts.get(str(c.id), 0)
+        total_with_candidate += count
         candidate_stats.append({
-            "id": candidate.id,
-            "name": candidate.name,
-            "party": candidate.party,
-            "number": candidate.number,
-            "is_pledged": candidate.is_pledged,
-            "votes": vote_count
+            "id": c.id, "name": c.name, "party": c.party,
+            "number": c.number, "is_pledged": c.is_pledged, "votes": count
         })
-    # Count undisclosed votes (voted but didn't disclose candidate, or selected "Unknown"/0)
-    total_with_candidate = sum(c["votes"] for c in candidate_stats)
+
     undisclosed_count = total_voted - total_with_candidate
     if undisclosed_count > 0:
         candidate_stats.append({
-            "id": 0,
-            "name": "Undisclosed",
-            "party": "Did not disclose",
-            "number": None,
-            "is_pledged": False,
-            "votes": undisclosed_count
+            "id": 0, "name": "Undisclosed", "party": "Did not disclose",
+            "number": None, "is_pledged": False, "votes": undisclosed_count
         })
-
     candidate_stats.sort(key=lambda x: x["votes"], reverse=True)
 
     return {
