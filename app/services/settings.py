@@ -36,7 +36,8 @@ def get_column_settings():
             for key, val in DEFAULT_COLUMNS.items():
                 if key not in saved:
                     saved[key] = val
-            return saved
+            # Return only column entries (dicts), skip _voting_open etc.
+            return {k: v for k, v in saved.items() if isinstance(v, dict)}
     return DEFAULT_COLUMNS.copy()
 
 def save_column_settings(settings):
@@ -46,7 +47,7 @@ def save_column_settings(settings):
 def get_visible_columns(view_type):
     """Get list of column keys visible for a view type (print/pdf/detail)"""
     settings = get_column_settings()
-    return {key: val for key, val in settings.items() if val.get(view_type, False)}
+    return {key: val for key, val in settings.items() if isinstance(val, dict) and val.get(view_type, False)}
 
 
 # --- Voting open/closed ---
