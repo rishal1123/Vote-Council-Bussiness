@@ -1,215 +1,249 @@
 {% extends "base.html" %}
 
-{% block title %}Vote Day - Mark Voters{% endblock %}
+{% block title %}Vote Day{% endblock %}
 
 {% block extra_css %}
 <style>
-    .voter-card {
-        max-width: 600px;
-        margin: 0 auto;
-    }
-    .voter-photo {
-        width: 150px;
-        height: 150px;
-        object-fit: cover;
-        border-radius: 8px;
-    }
-    .voter-photo-placeholder {
-        width: 150px;
-        height: 150px;
-        background: #e9ecef;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 3rem;
-        color: #6c757d;
-    }
-    .status-btn {
-        min-width: 100px;
-        padding: 15px 20px;
-        font-size: 1.1rem;
-    }
-    .candidate-option {
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    .candidate-option:hover {
-        background-color: #f8f9fa;
-    }
-    .candidate-option.selected {
-        background-color: #e7f1ff;
-        border-color: #0d6efd;
-    }
-    .search-section {
-        max-width: 500px;
-        margin: 0 auto;
-    }
-    #searchInput {
-        font-size: 1.3rem;
-        padding: 15px;
+    .vote-container { max-width: 640px; margin: 0 auto; }
+
+    /* Search toggle pills */
+    .search-toggle .btn { border-radius: 50px; padding: 10px 20px; font-weight: 500; }
+    .search-toggle .btn.active { box-shadow: 0 2px 8px rgba(13,110,253,0.3); }
+
+    /* Search inputs */
+    .search-box { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+    .search-box .form-control { border-radius: 12px; }
+    .search-box .input-group-text { border-radius: 12px 0 0 12px; background: #f8f9fa; }
+    .search-box .btn { border-radius: 0 12px 12px 0; }
+    #boxPrefix { font-weight: 600; text-align: center; background: #f0f7ff; }
+    #searchInput, #idSearchInput { font-size: 1.2rem; padding: 12px 16px; }
+
+    /* Voter list items */
+    .voter-list-item { border: none; border-bottom: 1px solid #f0f0f0; padding: 12px 16px; transition: background 0.15s; }
+    .voter-list-item:last-child { border-bottom: none; }
+    .voter-list-item:active { background: #e7f1ff; }
+    .voter-list-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+    .voter-list-avatar-placeholder { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #e9ecef, #dee2e6); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+    /* Voter detail card */
+    .voter-detail { border-radius: 16px; overflow: hidden; border: none; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    .voter-header { background: linear-gradient(135deg, #0a4d8c, #1a6fb5); color: white; padding: 20px; text-align: center; }
+    .voter-header-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid rgba(255,255,255,0.5); margin-bottom: 8px; }
+    .voter-header-placeholder { width: 80px; height: 80px; border-radius: 50%; background: rgba(255,255,255,0.2); display: inline-flex; align-items: center; justify-content: center; font-size: 2rem; margin-bottom: 8px; }
+    .voter-header .voter-name { font-size: 1.25rem; font-weight: 600; margin-bottom: 4px; }
+    .voter-header .voter-meta { font-size: 0.85rem; opacity: 0.85; }
+
+    /* Badge row */
+    .badge-row { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; padding: 12px 16px; background: #f8f9fa; }
+    .badge-row .badge { padding: 6px 12px; font-size: 0.8rem; border-radius: 20px; }
+
+    /* Quick pledge button */
+    .quick-pledge-btn { margin: 12px 16px; border-radius: 12px; padding: 16px; font-size: 1.1rem; font-weight: 600; border: 2px solid #198754; background: linear-gradient(135deg, #198754, #157347); color: white; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .quick-pledge-btn:hover, .quick-pledge-btn:active { background: linear-gradient(135deg, #157347, #126b40); color: white; }
+
+    /* Step sections */
+    .vote-step { padding: 16px; }
+    .vote-step h6 { color: #6c757d; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+    .step-divider { border-top: 1px solid #eee; margin: 0; }
+
+    /* Vote action buttons */
+    .vote-action-btn { border-radius: 12px; padding: 18px 16px; font-size: 1rem; font-weight: 500; border: 2px solid; display: flex; align-items: center; justify-content: center; gap: 8px; flex: 1; min-height: 64px; transition: all 0.2s; }
+    .vote-action-btn i { font-size: 1.3rem; }
+    .vote-action-btn.active { transform: scale(0.97); }
+    .btn-vote-yes { border-color: #198754; color: #198754; }
+    .btn-vote-yes:hover, .btn-vote-yes.active { background: #198754; color: white; border-color: #198754; }
+    .btn-vote-no { border-color: #6c757d; color: #6c757d; }
+    .btn-vote-no:hover, .btn-vote-no.active { background: #6c757d; color: white; border-color: #6c757d; }
+
+    /* Candidate cards */
+    .candidate-card { border-radius: 12px; padding: 14px; text-align: center; cursor: pointer; border: 2px solid #dee2e6; transition: all 0.2s; background: white; }
+    .candidate-card:active { transform: scale(0.97); }
+    .candidate-card.selected { border-color: #0d6efd; background: #e7f1ff; box-shadow: 0 0 0 3px rgba(13,110,253,0.15); }
+    .candidate-card.pledged-card { border-color: #198754; }
+    .candidate-card.pledged-card.selected { border-color: #198754; background: #d1e7dd; box-shadow: 0 0 0 3px rgba(25,135,84,0.15); }
+    .candidate-card .candidate-name { font-weight: 600; font-size: 0.95rem; }
+    .candidate-card .candidate-party { font-size: 0.8rem; color: #6c757d; }
+
+    /* Confirm button */
+    .confirm-footer { padding: 12px 16px 16px; }
+    .confirm-btn { border-radius: 12px; padding: 16px; font-size: 1.1rem; font-weight: 600; }
+
+    /* Recent marks */
+    .recent-card { border-radius: 16px; border: none; box-shadow: 0 2px 12px rgba(0,0,0,0.06); overflow: hidden; }
+    .recent-item { padding: 10px 16px; border-bottom: 1px solid #f5f5f5; display: flex; align-items: center; justify-content: space-between; }
+    .recent-item:last-child { border-bottom: none; }
+
+    /* No results */
+    .no-results-icon { width: 80px; height: 80px; border-radius: 50%; background: #f8f9fa; display: inline-flex; align-items: center; justify-content: center; font-size: 2rem; color: #adb5bd; margin-bottom: 16px; }
+
+    /* Back button */
+    .back-btn { border-radius: 50px; padding: 6px 16px; font-size: 0.85rem; }
+
+    /* Voting closed banner */
+    .closed-banner { border-radius: 12px; border: none; background: linear-gradient(135deg, #fee2e2, #fecaca); color: #991b1b; }
+
+    /* Mobile tweaks */
+    @media (max-width: 576px) {
+        .vote-container { margin: 0 -12px; }
+        .search-box { border-radius: 12px; padding: 12px; }
+        #searchInput, #idSearchInput { font-size: 1.1rem; padding: 10px 12px; }
+        .voter-header { padding: 16px; }
+        .voter-header-photo { width: 64px; height: 64px; }
+        .voter-header-placeholder { width: 64px; height: 64px; font-size: 1.5rem; }
+        .vote-action-btn { padding: 14px 12px; min-height: 56px; }
+        .candidate-card { padding: 10px; }
+        .quick-pledge-btn { margin: 8px 12px; padding: 14px; }
+        .recent-item { padding: 8px 12px; font-size: 0.9rem; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="text-center mb-4">
-        <h1 class="h2">
-            <i class="bi bi-check2-circle"></i> Vote Day - Mark Voters
-        </h1>
-        <p class="text-muted">Set Box prefix, then enter the number to find voters</p>
-    </div>
-
-    {% if not voting_open %}
-    <div class="alert alert-danger d-flex align-items-center mb-4">
-        <i class="bi bi-lock-fill me-2 fs-4"></i>
-        <div>
-            <strong>Voting is currently closed.</strong> You can search and view voters but cannot mark votes.
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Search Mode Toggle -->
-    <div class="search-section mb-4">
-        <div class="btn-group w-100 mb-3" role="group">
-            <button type="button" class="btn btn-outline-primary active" id="modeBox" onclick="setSearchMode('box')">
-                <i class="bi bi-box"></i> Search by Box#
-            </button>
-            <button type="button" class="btn btn-outline-primary" id="modeId" onclick="setSearchMode('id')">
-                <i class="bi bi-person-badge"></i> Search by National ID
-            </button>
+<div class="container py-3">
+    <div class="vote-container">
+        <!-- Header -->
+        <div class="text-center mb-3">
+            <h1 class="h4 mb-1"><i class="bi bi-check2-circle text-primary"></i> Vote Day</h1>
+            <p class="text-muted small mb-0">Search and mark voter attendance</p>
         </div>
 
-        <!-- Box# Search -->
-        <div id="boxSearchGroup">
-            <div class="input-group input-group-lg">
-                <span class="input-group-text"><i class="bi bi-box"></i></span>
-                <input type="text" class="form-control" id="boxPrefix" style="max-width: 120px;"
-                       placeholder="B2." value="B">
-                <input type="text" class="form-control" id="searchInput"
-                       placeholder="Number..." autofocus>
-                <button class="btn btn-primary" type="button" onclick="searchVoters()">
-                    <i class="bi bi-search"></i>
+        {% if not voting_open %}
+        <div class="alert closed-banner d-flex align-items-center mb-3 py-2 px-3">
+            <i class="bi bi-lock-fill me-2"></i>
+            <span><strong>Voting closed.</strong> View only — no changes allowed.</span>
+        </div>
+        {% endif %}
+
+        <!-- Search Section -->
+        <div class="search-box mb-3">
+            <!-- Mode Toggle -->
+            <div class="search-toggle d-flex gap-2 mb-3">
+                <button type="button" class="btn btn-sm btn-outline-primary active flex-fill" id="modeBox" onclick="setSearchMode('box')">
+                    <i class="bi bi-box"></i> Box#
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-primary flex-fill" id="modeId" onclick="setSearchMode('id')">
+                    <i class="bi bi-person-badge"></i> National ID
                 </button>
             </div>
-            <div class="form-text text-center">Set box prefix once (e.g. B2.), then enter number and press Enter</div>
-        </div>
 
-        <!-- National ID Search -->
-        <div id="idSearchGroup" class="d-none">
-            <div class="input-group input-group-lg">
-                <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
-                <input type="text" class="form-control" id="idSearchInput"
-                       placeholder="Enter National ID (e.g. A058917)...">
-                <button class="btn btn-primary" type="button" onclick="searchByNationalId()">
-                    <i class="bi bi-search"></i>
-                </button>
+            <!-- Box# Search -->
+            <div id="boxSearchGroup">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="boxPrefix" style="max-width: 90px;" placeholder="B2." value="B">
+                    <input type="text" class="form-control" id="searchInput" placeholder="Enter number..." autofocus>
+                    <button class="btn btn-primary px-3" type="button" onclick="searchVoters()">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+                <div class="form-text text-center mt-1 small">Set prefix once, then type number + Enter</div>
             </div>
-            <div class="form-text text-center">Enter full or partial National ID card number</div>
-        </div>
-    </div>
 
-    <!-- Voter List (shown after box search) -->
-    <div id="voterListSection" class="d-none mb-4">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-people"></i> Voters in <span id="boxLabel"></span></h5>
-                <span class="badge bg-primary" id="voterListCount">0</span>
-            </div>
-            <div class="card-body p-0">
-                <div class="list-group list-group-flush" id="voterList" style="max-height: 400px; overflow-y: auto;">
+            <!-- National ID Search -->
+            <div id="idSearchGroup" class="d-none">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                    <input type="text" class="form-control" id="idSearchInput" placeholder="e.g. A058917">
+                    <button class="btn btn-primary px-3" type="button" onclick="searchByNationalId()">
+                        <i class="bi bi-search"></i>
+                    </button>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Voter Card (hidden until voter selected) -->
-    <div id="voterSection" class="d-none">
-        <div class="mb-2">
-            <button class="btn btn-outline-secondary btn-sm" onclick="backToList()">
-                <i class="bi bi-arrow-left"></i> Back to list
-            </button>
+        <!-- Voter List -->
+        <div id="voterListSection" class="d-none mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+                <span class="text-muted small"><i class="bi bi-people-fill"></i> <span id="boxLabel"></span></span>
+                <span class="badge bg-primary rounded-pill" id="voterListCount">0</span>
+            </div>
+            <div class="search-box p-0">
+                <div id="voterList" style="max-height: 60vh; overflow-y: auto;"></div>
+            </div>
         </div>
-        <div class="voter-card card shadow">
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-12 col-sm-auto">
-                        <div id="voterPhoto"></div>
+
+        <!-- Voter Detail -->
+        <div id="voterSection" class="d-none">
+            <button class="btn btn-outline-secondary back-btn mb-2" onclick="backToList()">
+                <i class="bi bi-arrow-left"></i> Back
+            </button>
+
+            <div class="voter-detail card">
+                <!-- Header with photo & name -->
+                <div class="voter-header">
+                    <div id="voterPhoto"></div>
+                    <div class="voter-name" id="voterName"></div>
+                    <div class="voter-meta">
+                        <span id="voterId"></span> &middot; <span id="voterBox"></span>
                     </div>
-                    <div class="col-12 col-sm">
-                        <h3 id="voterName" class="mb-1"></h3>
-                        <p class="text-muted mb-2">
-                            <span id="voterId"></span>
-                            <span class="mx-2">|</span>
-                            <span id="voterBox"></span>
-                        </p>
-                        <div class="d-flex flex-wrap gap-2 mb-2">
-                            <span id="voterGender" class="badge bg-secondary"></span>
-                            <span id="voterAge" class="badge bg-secondary"></span>
-                            <span id="voterPledged" class="badge"></span>
-                            <span id="voterCurrentStatus" class="badge"></span>
+                    <div class="voter-meta" id="voterContact"></div>
+                </div>
+
+                <!-- Status badges -->
+                <div class="badge-row">
+                    <span id="voterGender" class="badge bg-secondary"></span>
+                    <span id="voterAge" class="badge bg-secondary"></span>
+                    <span id="voterPledged" class="badge"></span>
+                    <span id="voterCurrentStatus" class="badge"></span>
+                </div>
+
+                <!-- Quick Vote as Pledged -->
+                <div id="quickPledgedSection" class="d-none">
+                    <button class="btn quick-pledge-btn w-auto" onclick="quickVoteAsPledged()">
+                        <i class="bi bi-star-fill"></i> Quick: Vote as Pledged
+                    </button>
+                </div>
+
+                <!-- Step 1: Voted? -->
+                <div id="votingControls" class="{% if not voting_open %}d-none{% endif %}">
+                    <div class="step-divider"></div>
+                    <div class="vote-step">
+                        <h6><span class="badge bg-primary rounded-pill me-1">1</span> Has this person voted?</h6>
+                        <div class="d-flex gap-2">
+                            <button class="vote-action-btn btn-vote-yes" onclick="setVoted(true)">
+                                <i class="bi bi-check-circle-fill"></i> Yes, Voted
+                            </button>
+                            <button class="vote-action-btn btn-vote-no" onclick="setVoted(false)">
+                                <i class="bi bi-dash-circle"></i> Not Voted
+                            </button>
                         </div>
-                        <p id="voterContact" class="mb-0 text-muted small"></p>
                     </div>
                 </div>
-            </div>
 
-            <!-- Quick Action: Vote as Pledged (only for pledged voters) -->
-            <div id="quickPledgedSection" class="card-body border-top d-none">
-                <button class="btn btn-success btn-lg w-100 py-3" onclick="quickVoteAsPledged()">
-                    <i class="bi bi-star-fill"></i> Vote as Pledged (Our Candidate)
-                </button>
-            </div>
+                <!-- Step 2: Who? -->
+                <div id="candidateSection" class="d-none">
+                    <div class="step-divider"></div>
+                    <div class="vote-step">
+                        <h6><span class="badge bg-primary rounded-pill me-1">2</span> Who did they vote for?</h6>
+                        <div id="candidateList" class="row g-2"></div>
+                    </div>
+                </div>
 
-            <!-- Step 1: Has this person voted? -->
-            <div id="votingControls" class="card-body border-top {% if not voting_open %}d-none{% endif %}">
-                <h5 class="mb-3"><i class="bi bi-check-square"></i> Step 1: Has this person voted?</h5>
-                <div class="d-flex flex-wrap justify-content-center gap-2">
-                    <button class="btn btn-outline-success status-btn" onclick="setVoted(true)">
-                        <i class="bi bi-check-circle"></i><br>Yes, Voted
-                    </button>
-                    <button class="btn btn-outline-secondary status-btn" onclick="setVoted(false)">
-                        <i class="bi bi-dash-circle"></i><br>Not Voted
+                <!-- Confirm -->
+                <div id="confirmFooter" class="confirm-footer {% if not voting_open %}d-none{% endif %}">
+                    <button id="confirmBtn" class="btn btn-primary confirm-btn w-100" onclick="confirmVote()" disabled>
+                        <i class="bi bi-check2-all"></i> Confirm & Save
                     </button>
                 </div>
             </div>
 
-            <!-- Step 2: Who did they vote for? (shown if voted) -->
-            <div id="candidateSection" class="card-body border-top d-none">
-                <h5 class="mb-3"><i class="bi bi-person-check"></i> Step 2: Who did they vote for?</h5>
-                <div id="candidateList" class="row g-2">
-                    <!-- Populated by JS -->
+            <!-- Recent Marks -->
+            <div class="recent-card card mt-3">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-2 px-3">
+                    <span class="small fw-bold"><i class="bi bi-clock-history"></i> Recent</span>
+                    <span class="badge bg-primary rounded-pill" id="todayCount">0</span>
                 </div>
-            </div>
-
-            <!-- Confirm Button -->
-            <div class="card-footer {% if not voting_open %}d-none{% endif %}">
-                <button id="confirmBtn" class="btn btn-primary btn-lg w-100" onclick="confirmVote()" disabled>
-                    <i class="bi bi-check2"></i> Confirm & Save
-                </button>
-            </div>
-        </div>
-
-        <!-- Recent Activity -->
-        <div class="card mt-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Marks</h5>
-                <span class="badge bg-primary" id="todayCount">0 today</span>
-            </div>
-            <div class="card-body p-0">
-                <div class="list-group list-group-flush" id="recentMarks">
-                    <div class="list-group-item text-center text-muted">No marks yet</div>
+                <div id="recentMarks">
+                    <div class="recent-item text-center text-muted small py-3">No marks yet</div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- No Results Message -->
-    <div id="noResults" class="d-none text-center py-5">
-        <i class="bi bi-search" style="font-size: 3rem; color: #6c757d;"></i>
-        <h4 class="mt-3 text-muted">No voters found</h4>
-        <p class="text-muted">Try searching with a different Box# number</p>
+        <!-- No Results -->
+        <div id="noResults" class="d-none text-center py-5">
+            <div class="no-results-icon"><i class="bi bi-search"></i></div>
+            <h5 class="text-muted">No voters found</h5>
+            <p class="text-muted small">Try a different search</p>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -223,46 +257,29 @@ let selectedCandidate = null;
 let candidates = [];
 let recentMarks = [];
 let searchMode = 'box';
+let pledgedCandidate = null;
+const votingOpen = {{ 'true' if voting_open else 'false' }};
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Load candidates
     const response = await fetch('/candidates');
     candidates = await response.json();
+    pledgedCandidate = candidates.find(c => c.is_pledged) || null;
 
-    // Restore saved box prefix from localStorage
     const savedPrefix = localStorage.getItem('votecouncil_box_prefix');
-    if (savedPrefix) {
-        document.getElementById('boxPrefix').value = savedPrefix;
-    }
+    if (savedPrefix) document.getElementById('boxPrefix').value = savedPrefix;
 
-    // Restore saved search mode
     const savedMode = localStorage.getItem('votecouncil_search_mode');
     if (savedMode) setSearchMode(savedMode);
 
-    // Save prefix on change
     document.getElementById('boxPrefix').addEventListener('input', () => {
         localStorage.setItem('votecouncil_box_prefix', document.getElementById('boxPrefix').value);
     });
 
-    // Enter key to search on both inputs
-    document.getElementById('searchInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') searchVoters();
-    });
-    document.getElementById('boxPrefix').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            document.getElementById('searchInput').focus();
-        }
-    });
-    document.getElementById('idSearchInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') searchByNationalId();
-    });
+    document.getElementById('searchInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') searchVoters(); });
+    document.getElementById('boxPrefix').addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('searchInput').focus(); });
+    document.getElementById('idSearchInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') searchByNationalId(); });
 
-    // Focus appropriate input
-    if (searchMode === 'id') {
-        document.getElementById('idSearchInput').focus();
-    } else {
-        document.getElementById('searchInput').focus();
-    }
+    (searchMode === 'id' ? document.getElementById('idSearchInput') : document.getElementById('searchInput')).focus();
 });
 
 function setSearchMode(mode) {
@@ -272,33 +289,20 @@ function setSearchMode(mode) {
     document.getElementById('modeId').classList.toggle('active', mode === 'id');
     document.getElementById('boxSearchGroup').classList.toggle('d-none', mode !== 'box');
     document.getElementById('idSearchGroup').classList.toggle('d-none', mode !== 'id');
-    if (mode === 'id') {
-        document.getElementById('idSearchInput').focus();
-    } else {
-        document.getElementById('searchInput').focus();
-    }
+    (mode === 'id' ? document.getElementById('idSearchInput') : document.getElementById('searchInput')).focus();
 }
 
 async function searchByNationalId() {
     const query = document.getElementById('idSearchInput').value.trim();
     if (!query) return;
-
     try {
         const response = await fetch(`/voting/search-by-id?q=${encodeURIComponent(query)}`);
         if (response.ok) {
             const voters = await response.json();
             currentVoterList = voters;
-            if (voters.length === 1) {
-                displayVoter(voters[0]);
-            } else {
-                displayVoterList(voters, `ID: ${query}`);
-            }
-        } else {
-            showNoResults();
-        }
-    } catch (error) {
-        showToast('Error searching for voters', 'danger');
-    }
+            if (voters.length === 1) { displayVoter(voters[0]); } else { displayVoterList(voters, `ID: ${query}`); }
+        } else { showNoResults(); }
+    } catch (error) { showToast('Error searching for voters', 'danger'); }
 }
 
 async function searchVoters() {
@@ -306,67 +310,55 @@ async function searchVoters() {
     const number = document.getElementById('searchInput').value.trim();
     const query = prefix + number;
     if (!query) return;
-
     try {
         const response = await fetch(`/voting/search?q=${encodeURIComponent(query)}`);
         if (response.ok) {
             const voters = await response.json();
             currentVoterList = voters;
             displayVoterList(voters, query);
-        } else {
-            showNoResults();
-        }
-    } catch (error) {
-        showToast('Error searching for voters', 'danger');
-    }
+        } else { showNoResults(); }
+    } catch (error) { showToast('Error searching for voters', 'danger'); }
 }
+
+const statusColors = { 'not_voted': 'secondary', 'voted_pledged': 'success', 'voted_other': 'danger', 'undecided': 'warning' };
 
 function displayVoterList(voters, boxQuery) {
     document.getElementById('voterSection').classList.add('d-none');
     document.getElementById('noResults').classList.add('d-none');
     document.getElementById('voterListSection').classList.remove('d-none');
-
     document.getElementById('boxLabel').textContent = boxQuery;
     document.getElementById('voterListCount').textContent = voters.length;
 
-    const statusColors = {
-        'not_voted': 'secondary',
-        'voted_pledged': 'success',
-        'voted_other': 'danger',
-        'undecided': 'warning'
-    };
-
     const list = document.getElementById('voterList');
     list.innerHTML = voters.map(v => {
-        const statusColor = statusColors[v.vote_status] || 'secondary';
-        const statusLabel = v.vote_status.replace(/_/g, ' ');
+        const color = statusColors[v.vote_status] || 'secondary';
+        const label = v.vote_status.replace(/_/g, ' ');
         const photo = v.photo_path
-            ? `<img src="/uploads/${v.photo_path}" class="rounded-circle me-2" style="width:36px;height:36px;object-fit:cover;">`
-            : `<span class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center me-2" style="width:36px;height:36px;"><i class="bi bi-person text-muted"></i></span>`;
-
+            ? `<img src="/uploads/${v.photo_path}" class="voter-list-avatar" alt="">`
+            : `<div class="voter-list-avatar-placeholder"><i class="bi bi-person text-muted"></i></div>`;
+        const pledgeIcon = v.is_pledged === 'yes' ? '<i class="bi bi-star-fill text-success ms-1" title="Pledged"></i>' : '';
         return `
-            <button class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-2" onclick='selectVoterFromList(${v.id})'>
+            <div class="voter-list-item d-flex align-items-center gap-3" role="button" onclick="selectVoterFromList(${v.id})">
                 ${photo}
-                <div class="flex-grow-1">
-                    <div class="fw-bold">${escapeHtml(v.name)}</div>
-                    <small class="text-muted">${escapeHtml(v.national_id || '')} ${v.box_number ? '| ' + escapeHtml(v.box_number) : ''}</small>
+                <div class="flex-grow-1 min-width-0">
+                    <div class="fw-semibold text-truncate">${escapeHtml(v.name)}${pledgeIcon}</div>
+                    <div class="text-muted small">${escapeHtml(v.national_id || '')} ${v.box_number ? '&middot; ' + escapeHtml(v.box_number) : ''}</div>
                 </div>
-                <span class="badge bg-${statusColor}">${statusLabel}</span>
-            </button>
-        `;
+                <span class="badge bg-${color} rounded-pill">${label}</span>
+            </div>`;
     }).join('');
 }
 
 function selectVoterFromList(voterId) {
     const voter = currentVoterList.find(v => v.id === voterId);
-    if (voter) {
-        displayVoter(voter);
-    }
+    if (voter) displayVoter(voter);
 }
 
 function backToList() {
     document.getElementById('voterSection').classList.add('d-none');
-    document.getElementById('voterListSection').classList.remove('d-none');
+    if (currentVoterList.length > 0) {
+        document.getElementById('voterListSection').classList.remove('d-none');
+    }
 }
 
 function displayVoter(voter) {
@@ -381,321 +373,193 @@ function displayVoter(voter) {
     // Photo
     const photoDiv = document.getElementById('voterPhoto');
     if (voter.photo_path) {
-        photoDiv.innerHTML = `<img src="/uploads/${voter.photo_path}" class="voter-photo" alt="Photo">`;
+        photoDiv.innerHTML = `<img src="/uploads/${voter.photo_path}" class="voter-header-photo" alt="">`;
     } else {
-        photoDiv.innerHTML = `<div class="voter-photo-placeholder"><i class="bi bi-person"></i></div>`;
+        photoDiv.innerHTML = `<div class="voter-header-placeholder"><i class="bi bi-person-fill"></i></div>`;
     }
 
-    // Basic info (use textContent for safety against XSS)
     document.getElementById('voterName').textContent = voter.name;
-    document.getElementById('voterId').textContent = `ID: ${voter.voter_id || 'N/A'}`;
-    document.getElementById('voterBox').textContent = voter.box_name || 'No Box';
+    document.getElementById('voterId').textContent = voter.national_id || voter.voter_id || 'N/A';
+    document.getElementById('voterBox').textContent = voter.box_name || voter.box_number || 'No Box';
+    document.getElementById('voterContact').textContent = voter.contact || voter.new_contact || '';
+
     document.getElementById('voterGender').textContent = voter.gender || '?';
-    document.getElementById('voterAge').textContent = voter.age ? `${voter.age} yrs` : 'Age unknown';
+    document.getElementById('voterAge').textContent = voter.age ? `${voter.age} yrs` : '?';
 
-    // Pledged badge
     const pledgedBadge = document.getElementById('voterPledged');
-    if (voter.is_pledged === 'yes') {
-        pledgedBadge.className = 'badge bg-success';
-        pledgedBadge.textContent = 'Pledged';
-    } else if (voter.is_pledged === 'undecided') {
-        pledgedBadge.className = 'badge bg-warning';
-        pledgedBadge.textContent = 'Undecided';
-    } else {
-        pledgedBadge.className = 'badge bg-secondary';
-        pledgedBadge.textContent = 'Not Pledged';
-    }
+    if (voter.is_pledged === 'yes') { pledgedBadge.className = 'badge bg-success'; pledgedBadge.textContent = 'Pledged'; }
+    else if (voter.is_pledged === 'undecided') { pledgedBadge.className = 'badge bg-warning text-dark'; pledgedBadge.textContent = 'Undecided'; }
+    else { pledgedBadge.className = 'badge bg-secondary'; pledgedBadge.textContent = 'Not Pledged'; }
 
-    // Current status badge
     const statusBadge = document.getElementById('voterCurrentStatus');
-    const statusColors = {
-        'not_voted': 'secondary',
-        'voted_pledged': 'success',
-        'voted_other': 'danger',
-        'undecided': 'warning'
-    };
     statusBadge.className = `badge bg-${statusColors[voter.vote_status] || 'secondary'}`;
     statusBadge.textContent = voter.vote_status.replace(/_/g, ' ');
 
-    // Contact
-    document.getElementById('voterContact').textContent = voter.contact || voter.new_contact || '';
-
-    // Reset buttons
-    document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
+    // Reset controls
+    document.querySelectorAll('.vote-action-btn').forEach(btn => btn.classList.remove('active'));
     document.getElementById('candidateSection').classList.add('d-none');
     document.getElementById('confirmBtn').disabled = true;
 
-    // Show quick "Vote as Pledged" button for pledged voters (only when voting is open)
+    // Quick pledge button
     const quickSection = document.getElementById('quickPledgedSection');
-    const votingOpen = {{ 'true' if voting_open else 'false' }};
-    if (votingOpen && voter.is_pledged === 'yes' && voter.vote_status === 'not_voted') {
+    if (votingOpen && voter.is_pledged === 'yes' && voter.vote_status === 'not_voted' && pledgedCandidate) {
         quickSection.classList.remove('d-none');
     } else {
         quickSection.classList.add('d-none');
     }
 
-    // Populate candidates
     renderCandidates();
+    // Scroll voter into view on mobile
+    document.getElementById('voterSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-let pledgedCandidate = null;
-
 async function quickVoteAsPledged() {
-    if (!currentVoter) return;
-    const pc = candidates.find(c => c.is_pledged);
-    if (!pc) {
-        showToast('No pledged candidate configured', 'warning');
-        return;
-    }
-
-    const data = { vote_status: 'voted_pledged', voted_for: pc.id };
+    if (!currentVoter || !pledgedCandidate) return;
+    const data = { vote_status: 'voted_pledged', voted_for: pledgedCandidate.id };
     try {
         const response = await fetch(`/voting/mark/${currentVoter.id}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
         });
         if (response.ok) {
-            showToast(`${currentVoter.name} marked as Voted Pledged`, 'success');
+            showToast(`${currentVoter.name} — Voted Pledged`, 'success');
             addToRecentMarks(currentVoter, 'voted_pledged');
-            if (currentVoterList.length > 0) {
-                const idx = currentVoterList.findIndex(v => v.id === currentVoter.id);
-                if (idx >= 0) currentVoterList[idx].vote_status = 'voted_pledged';
-                const prefix = document.getElementById('boxPrefix').value.trim();
-                const number = document.getElementById('searchInput').value.trim();
-                displayVoterList(currentVoterList, prefix + number);
-                document.getElementById('voterSection').classList.add('d-none');
-            } else {
-                document.getElementById('voterSection').classList.add('d-none');
-                document.getElementById(searchMode === 'id' ? 'idSearchInput' : 'searchInput').value = '';
-                document.getElementById(searchMode === 'id' ? 'idSearchInput' : 'searchInput').focus();
-            }
-        } else {
-            showToast('Failed to mark vote', 'danger');
-        }
+            returnAfterMark();
+        } else { showToast('Failed to mark vote', 'danger'); }
     } catch (error) {
-        showToast('Saved offline - will sync when online', 'warning');
+        showToast('Saved offline — will sync when online', 'warning');
         addToRecentMarks(currentVoter, 'voted_pledged');
+        returnAfterMark();
     }
 }
 
 function renderCandidates() {
     const list = document.getElementById('candidateList');
-
-    // Find the pledged candidate
-    pledgedCandidate = candidates.find(c => c.is_pledged) || null;
-
-    // Show pledged candidate first, then others, then "Not Disclosed"
     let html = '';
 
-    // Pledged candidate (highlighted)
     if (pledgedCandidate) {
         html += `
-            <div class="col-12 col-sm-6 col-md-4">
-                <div class="card candidate-option p-3 text-center border-success" data-id="${pledgedCandidate.id}" data-pledged="true" onclick="selectCandidate(${pledgedCandidate.id}, true)">
-                    <span class="badge bg-success mb-1">Our Candidate</span>
-                    <div class="fw-bold">${escapeHtml(pledgedCandidate.name)}</div>
-                    <small class="text-muted">${escapeHtml(pledgedCandidate.party) || ''} ${pledgedCandidate.number ? '#' + escapeHtml(String(pledgedCandidate.number)) : ''}</small>
+            <div class="col-12">
+                <div class="candidate-card pledged-card" data-id="${pledgedCandidate.id}" data-pledged="true" onclick="selectCandidate(${pledgedCandidate.id}, true)">
+                    <span class="badge bg-success mb-1"><i class="bi bi-star-fill"></i> Our Candidate</span>
+                    <div class="candidate-name">${escapeHtml(pledgedCandidate.name)}</div>
+                    <div class="candidate-party">${escapeHtml(pledgedCandidate.party || '')} ${pledgedCandidate.number ? '#' + escapeHtml(String(pledgedCandidate.number)) : ''}</div>
                 </div>
-            </div>
-        `;
+            </div>`;
     }
 
-    // Other candidates
     candidates.filter(c => !c.is_pledged).forEach(c => {
         html += `
-            <div class="col-6 col-md-4">
-                <div class="card candidate-option p-3 text-center" data-id="${c.id}" data-pledged="false" onclick="selectCandidate(${c.id}, false)">
-                    <div class="fw-bold">${escapeHtml(c.name)}</div>
-                    <small class="text-muted">${escapeHtml(c.party) || ''} ${c.number ? '#' + escapeHtml(String(c.number)) : ''}</small>
+            <div class="col-6">
+                <div class="candidate-card" data-id="${c.id}" data-pledged="false" onclick="selectCandidate(${c.id}, false)">
+                    <div class="candidate-name">${escapeHtml(c.name)}</div>
+                    <div class="candidate-party">${escapeHtml(c.party || '')} ${c.number ? '#' + escapeHtml(String(c.number)) : ''}</div>
                 </div>
-            </div>
-        `;
+            </div>`;
     });
 
-    // Not Disclosed option
     html += `
-        <div class="col-6 col-md-4">
-            <div class="card candidate-option p-3 text-center" data-id="0" data-pledged="false" onclick="selectCandidate(0, false)">
-                <div class="fw-bold">Not Disclosed</div>
-                <small class="text-muted">Did not disclose</small>
+        <div class="col-6">
+            <div class="candidate-card" data-id="0" data-pledged="false" onclick="selectCandidate(0, false)">
+                <div class="candidate-name"><i class="bi bi-question-circle"></i> Not Disclosed</div>
             </div>
-        </div>
-    `;
+        </div>`;
 
     list.innerHTML = html;
 }
 
 function setVoted(hasVoted) {
-    // Reset candidate selection
     selectedCandidate = null;
-    document.querySelectorAll('.candidate-option').forEach(el => el.classList.remove('selected'));
+    document.querySelectorAll('.candidate-card').forEach(el => el.classList.remove('selected'));
+    document.querySelectorAll('.vote-action-btn').forEach(btn => btn.classList.remove('active'));
 
-    // Update button states
-    document.querySelectorAll('.status-btn').forEach(btn => {
-        btn.classList.remove('active', 'btn-success', 'btn-secondary');
-        btn.classList.add('btn-outline-success', 'btn-outline-secondary');
-    });
-
-    const btns = document.querySelectorAll('.status-btn');
     if (hasVoted) {
-        selectedStatus = '_voted'; // Temporary, will be resolved based on candidate
-        btns[0].classList.remove('btn-outline-success');
-        btns[0].classList.add('btn-success', 'active');
+        selectedStatus = '_voted';
+        document.querySelector('.btn-vote-yes').classList.add('active');
         document.getElementById('candidateSection').classList.remove('d-none');
     } else {
         selectedStatus = 'not_voted';
-        btns[1].classList.remove('btn-outline-secondary');
-        btns[1].classList.add('btn-secondary', 'active');
+        document.querySelector('.btn-vote-no').classList.add('active');
         document.getElementById('candidateSection').classList.add('d-none');
     }
-
     updateConfirmButton();
 }
 
 function selectCandidate(id, isPledgedCandidate) {
     selectedCandidate = id;
+    if (isPledgedCandidate) selectedStatus = 'voted_pledged';
+    else if (id === 0) selectedStatus = 'undecided';
+    else selectedStatus = 'voted_other';
 
-    // Determine vote status based on which candidate was selected
-    if (isPledgedCandidate) {
-        selectedStatus = 'voted_pledged';
-    } else if (id === 0) {
-        selectedStatus = 'undecided';
-    } else {
-        selectedStatus = 'voted_other';
-    }
-
-    // Update selection visual
-    document.querySelectorAll('.candidate-option').forEach(el => el.classList.remove('selected'));
-    document.querySelector(`.candidate-option[data-id="${id}"]`).classList.add('selected');
-
+    document.querySelectorAll('.candidate-card').forEach(el => el.classList.remove('selected'));
+    document.querySelector(`.candidate-card[data-id="${id}"]`).classList.add('selected');
     updateConfirmButton();
 }
 
 function updateConfirmButton() {
     const btn = document.getElementById('confirmBtn');
-
-    if (selectedStatus === 'not_voted') {
-        btn.disabled = false;
-    } else if (selectedStatus && selectedStatus !== '_voted' && selectedCandidate !== null) {
-        btn.disabled = false;
-    } else {
-        btn.disabled = true;
-    }
+    btn.disabled = !(selectedStatus === 'not_voted' || (selectedStatus && selectedStatus !== '_voted' && selectedCandidate !== null));
 }
 
 async function confirmVote() {
     if (!currentVoter || !selectedStatus) return;
-
-    const data = {
-        vote_status: selectedStatus,
-        voted_for: selectedCandidate || null
-    };
+    const data = { vote_status: selectedStatus, voted_for: selectedCandidate || null };
 
     try {
         const response = await fetch(`/voting/mark/${currentVoter.id}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
         });
-
         if (response.ok) {
             const result = await response.json().catch(() => ({}));
-            if (result.status === 'queued') {
-                // Queued offline by the service worker
-                showToast('Saved offline - will sync when online', 'warning');
-            } else {
-                showToast(`Marked ${currentVoter.name} as ${selectedStatus.replace(/_/g, ' ')}`, 'success');
-            }
+            showToast(result.status === 'queued' ? 'Saved offline — will sync' : `${currentVoter.name} — ${selectedStatus.replace(/_/g, ' ')}`, result.status === 'queued' ? 'warning' : 'success');
             addToRecentMarks(currentVoter, selectedStatus);
-
-            // Update voter in the list and go back
-            if (currentVoterList.length > 0) {
-                const idx = currentVoterList.findIndex(v => v.id === currentVoter.id);
-                if (idx >= 0) {
-                    currentVoterList[idx].vote_status = selectedStatus;
-                }
-                const prefix = document.getElementById('boxPrefix').value.trim();
-                const number = document.getElementById('searchInput').value.trim();
-                displayVoterList(currentVoterList, prefix + number);
-                document.getElementById('voterSection').classList.add('d-none');
-            } else {
-                document.getElementById('searchInput').value = '';
-                document.getElementById('searchInput').focus();
-                document.getElementById('voterSection').classList.add('d-none');
-            }
-
-            // Update pending badge
-            if (typeof updatePendingSyncBadge === 'function') {
-                updatePendingSyncBadge();
-            }
-        } else {
-            showToast('Failed to update vote status', 'danger');
-        }
+            returnAfterMark();
+        } else { showToast('Failed to update vote status', 'danger'); }
     } catch (error) {
-        showToast('Saved offline - will sync when online', 'warning');
+        showToast('Saved offline — will sync when online', 'warning');
         addToRecentMarks(currentVoter, selectedStatus);
-
-        // Go back to list
-        if (currentVoterList.length > 0) {
-            const idx = currentVoterList.findIndex(v => v.id === currentVoter.id);
-            if (idx >= 0) currentVoterList[idx].vote_status = selectedStatus;
-            const prefix = document.getElementById('boxPrefix').value.trim();
-                const number = document.getElementById('searchInput').value.trim();
-                displayVoterList(currentVoterList, prefix + number);
-            document.getElementById('voterSection').classList.add('d-none');
-        } else {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('searchInput').focus();
-            document.getElementById('voterSection').classList.add('d-none');
-        }
-
-        // Update pending badge
-        if (typeof updatePendingSyncBadge === 'function') {
-            updatePendingSyncBadge();
-        }
+        returnAfterMark();
     }
 }
 
+function returnAfterMark() {
+    if (currentVoterList.length > 0) {
+        const idx = currentVoterList.findIndex(v => v.id === currentVoter.id);
+        if (idx >= 0) currentVoterList[idx].vote_status = selectedStatus || 'voted_pledged';
+        const prefix = document.getElementById('boxPrefix').value.trim();
+        const number = document.getElementById('searchInput').value.trim();
+        displayVoterList(currentVoterList, searchMode === 'id' ? `ID: ${document.getElementById('idSearchInput').value.trim()}` : prefix + number);
+        document.getElementById('voterSection').classList.add('d-none');
+    } else {
+        document.getElementById('voterSection').classList.add('d-none');
+        const input = document.getElementById(searchMode === 'id' ? 'idSearchInput' : 'searchInput');
+        input.value = '';
+        input.focus();
+    }
+    if (typeof updatePendingSyncBadge === 'function') updatePendingSyncBadge();
+}
+
 function addToRecentMarks(voter, status) {
-    const statusColors = {
-        'not_voted': 'secondary',
-        'voted_pledged': 'success',
-        'voted_other': 'danger',
-        'undecided': 'warning'
-    };
-
-    recentMarks.unshift({
-        name: voter.name,
-        voter_id: voter.voter_id,
-        status: status,
-        time: new Date().toLocaleTimeString()
-    });
-
-    // Keep only last 10
+    recentMarks.unshift({ name: voter.name, voter_id: voter.voter_id, national_id: voter.national_id, status, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
     recentMarks = recentMarks.slice(0, 10);
 
-    // Update UI
-    const list = document.getElementById('recentMarks');
-    list.innerHTML = recentMarks.map(m => `
-        <div class="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-                <strong>${escapeHtml(m.name)}</strong>
-                <small class="text-muted ms-2">${escapeHtml(m.voter_id) || ''}</small>
+    document.getElementById('recentMarks').innerHTML = recentMarks.map(m => `
+        <div class="recent-item">
+            <div class="min-width-0">
+                <span class="fw-semibold small">${escapeHtml(m.name)}</span>
+                <span class="text-muted small ms-1">${escapeHtml(m.national_id || m.voter_id || '')}</span>
             </div>
-            <div>
-                <span class="badge bg-${statusColors[m.status]}">${m.status.replace(/_/g, ' ')}</span>
-                <small class="text-muted ms-2">${m.time}</small>
+            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                <span class="badge bg-${statusColors[m.status]} rounded-pill">${m.status.replace(/_/g, ' ')}</span>
+                <span class="text-muted small">${m.time}</span>
             </div>
-        </div>
-    `).join('');
+        </div>`).join('');
 
-    // Update count
-    document.getElementById('todayCount').textContent = `${recentMarks.length} recent`;
+    document.getElementById('todayCount').textContent = recentMarks.length;
 }
 
 function showNoResults() {
     document.getElementById('voterSection').classList.add('d-none');
+    document.getElementById('voterListSection').classList.add('d-none');
     document.getElementById('noResults').classList.remove('d-none');
 }
 </script>
