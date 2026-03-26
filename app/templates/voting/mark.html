@@ -48,6 +48,9 @@
 
     /* Vote action buttons */
     .vote-action-btn { border-radius: 12px; padding: 18px 16px; font-size: 1rem; font-weight: 500; border: 2px solid; display: flex; align-items: center; justify-content: center; gap: 8px; flex: 1; min-height: 64px; transition: all 0.2s; }
+    .vote-btn-group { display: flex; gap: 0; }
+    .vote-btn-group .vote-action-btn:first-child { border-radius: 12px 0 0 12px; border-right: 1px solid; }
+    .vote-btn-group .vote-action-btn:last-child { border-radius: 0 12px 12px 0; border-left: 1px solid; }
     .vote-action-btn i { font-size: 1.3rem; }
     .vote-action-btn.active { transform: scale(0.97); }
     .btn-vote-yes { border-color: #198754; color: #198754; }
@@ -198,7 +201,7 @@
                     <div class="step-divider"></div>
                     <div class="vote-step">
                         <h6><span class="badge bg-primary rounded-pill me-1">1</span> Has this person voted?</h6>
-                        <div class="d-flex gap-2">
+                        <div class="vote-btn-group">
                             <button class="vote-action-btn btn-vote-yes" onclick="setVoted(true)">
                                 <i class="bi bi-check-circle-fill"></i> Yes, Voted
                             </button>
