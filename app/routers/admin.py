@@ -363,44 +363,70 @@ async def get_system_stats(
     import platform
     import shutil
 
-    # Database stats
-    db_path = get_db_path()
-    db_size = os.path.getsize(db_path) if os.path.exists(db_path) else 0
-    wal_path = db_path + "-wal"
-    wal_size = os.path.getsize(wal_path) if os.path.exists(wal_path) else 0
+    # Database stats - try multiple paths
+    db_size = 0
+    wal_size = 0
+    try:
+        db_path = get_db_path()
+        for path in [db_path, os.path.join("/app", db_path), os.path.abspath(db_path)]:
+            if os.path.exists(path):
+                db_size = os.path.getsize(path)
+                wal = path + "-wal"
+                wal_size = os.path.getsize(wal) if os.path.exists(wal) else 0
+                break
+    except Exception:
+        pass
 
     # Record counts
-    voter_count = db.query(Voter).count()
-    box_count = db.query(Box).count()
-    focal_count = db.query(Focal).count()
-    candidate_count = db.query(Candidate).count()
-    user_count = db.query(User).count()
-    log_count = db.query(ActivityLog).count()
+    try:
+        voter_count = db.query(Voter).count()
+        box_count = db.query(Box).count()
+        focal_count = db.query(Focal).count()
+        candidate_count = db.query(Candidate).count()
+        user_count = db.query(User).count()
+        log_count = db.query(ActivityLog).count()
+    except Exception:
+        voter_count = box_count = focal_count = candidate_count = user_count = log_count = 0
 
     # Uploads size
     uploads_size = 0
     uploads_count = 0
-    if os.path.exists("uploads"):
-        for f in os.listdir("uploads"):
-            fp = os.path.join("uploads", f)
-            if os.path.isfile(fp):
-                uploads_size += os.path.getsize(fp)
-                uploads_count += 1
+    for uploads_dir in ["uploads", "/app/uploads"]:
+        if os.path.exists(uploads_dir):
+            for f in os.listdir(uploads_dir):
+                fp = os.path.join(uploads_dir, f)
+                if os.path.isfile(fp):
+                    uploads_size += os.path.getsize(fp)
+                    uploads_count += 1
+            break
 
     # Backups size
     backups_size = 0
     backups_count = 0
-    if os.path.exists(BACKUP_DIR):
-        for f in os.listdir(BACKUP_DIR):
-            fp = os.path.join(BACKUP_DIR, f)
-            if os.path.isfile(fp):
-                backups_size += os.path.getsize(fp)
-                backups_count += 1
+    for bdir in [BACKUP_DIR, "/app/" + BACKUP_DIR]:
+        if os.path.exists(bdir):
+            for f in os.listdir(bdir):
+                fp = os.path.join(bdir, f)
+                if os.path.isfile(fp):
+                    backups_size += os.path.getsize(fp)
+                    backups_count += 1
+            break
 
-    # System info
-    disk = shutil.disk_usage(".")
+    # Disk usage
+    try:
+        disk = shutil.disk_usage("/")
+        disk_total = round(disk.total / 1024 / 1024 / 1024, 1)
+        disk_used = round(disk.used / 1024 / 1024 / 1024, 1)
+        disk_percent = round(disk.used / disk.total * 100, 1)
+    except Exception:
+        disk_total = disk_used = disk_percent = 0
 
-    # Try psutil for CPU/memory, fallback if not available
+    # CPU/memory - try psutil, then /proc, then fallback
+    cpu_count = os.cpu_count() or 1
+    cpu_percent = 0
+    mem_total = mem_used = 0
+    mem_percent = 0.0
+
     try:
         import psutil
         mem = psutil.virtual_memory()
@@ -410,11 +436,26 @@ async def get_system_stats(
         mem_used = round(mem.used / 1024 / 1024)
         mem_percent = mem.percent
     except ImportError:
-        cpu_count = os.cpu_count() or 1
-        cpu_percent = 0
-        mem_total = 0
-        mem_used = 0
-        mem_percent = 0
+        # Fallback: read /proc/meminfo (Linux/Docker)
+        try:
+            with open("/proc/meminfo") as f:
+                meminfo = {}
+                for line in f:
+                    parts = line.split()
+                    meminfo[parts[0].rstrip(":")] = int(parts[1])
+                mem_total = round(meminfo.get("MemTotal", 0) / 1024)
+                mem_free = round((meminfo.get("MemAvailable", 0) or meminfo.get("MemFree", 0)) / 1024)
+                mem_used = mem_total - mem_free
+                mem_percent = round(mem_used / mem_total * 100, 1) if mem_total > 0 else 0
+        except Exception:
+            pass
+        # CPU usage from /proc/loadavg
+        try:
+            with open("/proc/loadavg") as f:
+                load = float(f.read().split()[0])
+                cpu_percent = round(min(load / cpu_count * 100, 100), 1)
+        except Exception:
+            pass
 
     return {
         "database": {
@@ -444,8 +485,8 @@ async def get_system_stats(
             "memory_total_mb": mem_total,
             "memory_used_mb": mem_used,
             "memory_percent": mem_percent,
-            "disk_total_gb": round(disk.total / 1024 / 1024 / 1024, 1),
-            "disk_used_gb": round(disk.used / 1024 / 1024 / 1024, 1),
-            "disk_percent": round(disk.used / disk.total * 100, 1),
+            "disk_total_gb": disk_total,
+            "disk_used_gb": disk_used,
+            "disk_percent": disk_percent,
         }
     }
