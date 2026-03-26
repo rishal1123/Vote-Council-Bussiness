@@ -2,138 +2,134 @@
 
 {% block title %}Dashboard - VoteCouncil{% endblock %}
 
+{% block extra_css %}
+<style>
+    .stat-card .card-body { position: relative; }
+    .stat-card .stat-icon { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 2.5rem; opacity: 0.3; }
+    .stat-card h2 { font-size: 1.8rem; font-weight: 700; }
+    .stat-card h6 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85; }
+    .breakdown-box { border-radius: var(--radius-md); padding: 16px; text-align: center; background: #fafbfc; border: 1px solid #eef0f2; transition: transform 0.15s; }
+    .breakdown-box:hover { transform: translateY(-1px); }
+    .breakdown-box h4 { font-weight: 700; margin-bottom: 2px; }
+    .focal-table { max-height: 320px; overflow-y: auto; }
+    .candidate-vote-card { border-radius: var(--radius-md); text-align: center; transition: transform 0.15s; }
+    .candidate-vote-card:hover { transform: translateY(-2px); }
+    .progress-thick { height: 10px; }
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--mv-green); animation: pulse 2s ease-in-out infinite; }
+    .status-dot.disconnected { background: var(--mv-red); animation: none; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .voting-banner { border-radius: var(--radius-md); padding: 12px 16px; }
+    @media (max-width: 576px) {
+        .stat-card h2 { font-size: 1.4rem; }
+        .stat-card .stat-icon { font-size: 1.8rem; right: 10px; }
+        .breakdown-box { padding: 10px; }
+        .breakdown-box h4 { font-size: 1.1rem; }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <!-- Header -->
-    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-4 gap-2">
-        <h1 class="h3 mb-0">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </h1>
-        <div class="d-flex flex-wrap align-items-center gap-2 gap-sm-3">
-            <span class="d-flex align-items-center gap-2">
-                <span class="status-dot"></span>
-                <small class="text-muted" id="lastUpdated">Last updated: --:--:--</small>
-            </span>
-            <button class="btn btn-outline-primary" onclick="refreshStats()">
-                <i class="bi bi-arrow-clockwise"></i> Refresh
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-3 gap-2 page-header">
+        <h1 class="h4 mb-0"><i class="bi bi-speedometer2 text-primary"></i> Dashboard</h1>
+        <div class="d-flex align-items-center gap-2">
+            <span class="status-dot"></span>
+            <small class="text-muted" id="lastUpdated">--:--:--</small>
+            <button class="btn btn-sm btn-outline-primary" onclick="refreshStats()">
+                <i class="bi bi-arrow-clockwise"></i>
             </button>
         </div>
     </div>
 
     {% if user.role.value == 'admin' %}
-    <div id="votingToggle" class="alert d-flex align-items-center justify-content-between mb-4">
-        <div>
-            <i class="bi bi-broadcast me-2"></i>
-            <strong>Voting Status:</strong> <span id="votingStatusText">Loading...</span>
-        </div>
-        <button id="votingToggleBtn" class="btn btn-sm" onclick="toggleVoting()">
-            Loading...
-        </button>
+    <div id="votingToggle" class="alert voting-banner d-flex align-items-center justify-content-between mb-3">
+        <div><i class="bi bi-broadcast me-2"></i> <strong>Voting:</strong> <span id="votingStatusText">Loading...</span></div>
+        <button id="votingToggleBtn" class="btn btn-sm" onclick="toggleVoting()">Loading...</button>
     </div>
     {% endif %}
 
     {% if focal_view %}
-    <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
-        <i class="bi bi-info-circle-fill me-2"></i>
-        Showing stats for your assigned voters
+    <div class="alert alert-info d-flex align-items-center mb-3 py-2 px-3 small">
+        <i class="bi bi-info-circle-fill me-2"></i> Showing stats for your assigned voters
     </div>
     {% endif %}
 
     <!-- Summary Cards -->
-    <div class="row g-3 mb-4">
+    <div class="row g-3 mb-3">
         <div class="col-6 col-md-3">
-            <div class="card bg-primary text-white h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="card-subtitle mb-2 opacity-75">Total Voters</h6>
-                            <h2 class="card-title mb-0" id="totalVoters">{{ stats.total_voters }}</h2>
-                        </div>
-                        <i class="bi bi-people fs-1 opacity-50"></i>
-                    </div>
+            <div class="card stat-card bg-primary text-white h-100">
+                <div class="card-body py-3">
+                    <i class="bi bi-people stat-icon"></i>
+                    <h6 class="mb-1">Total Voters</h6>
+                    <h2 class="mb-0" id="totalVoters">{{ stats.total_voters }}</h2>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="card bg-success text-white h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="card-subtitle mb-2 opacity-75">Voted</h6>
-                            <h2 class="card-title mb-0" id="totalVoted">{{ stats.total_voted }}</h2>
-                            <small class="opacity-75" id="turnoutPct">{{ stats.turnout_percentage }}%</small>
-                        </div>
-                        <i class="bi bi-check2-circle fs-1 opacity-50"></i>
-                    </div>
+            <div class="card stat-card bg-success text-white h-100">
+                <div class="card-body py-3">
+                    <i class="bi bi-check2-circle stat-icon"></i>
+                    <h6 class="mb-1">Voted</h6>
+                    <h2 class="mb-0" id="totalVoted">{{ stats.total_voted }}</h2>
+                    <small class="opacity-75" id="turnoutPct">{{ stats.turnout_percentage }}%</small>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="card bg-warning text-dark h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="card-subtitle mb-2 opacity-75">Remaining</h6>
-                            <h2 class="card-title mb-0" id="remaining">{{ stats.remaining }}</h2>
-                        </div>
-                        <i class="bi bi-hourglass-split fs-1 opacity-50"></i>
-                    </div>
+            <div class="card stat-card bg-warning text-dark h-100">
+                <div class="card-body py-3">
+                    <i class="bi bi-hourglass-split stat-icon"></i>
+                    <h6 class="mb-1">Remaining</h6>
+                    <h2 class="mb-0" id="remaining">{{ stats.remaining }}</h2>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="card bg-info text-white h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="card-subtitle mb-2 opacity-75">Pledged</h6>
-                            <h2 class="card-title mb-0" id="totalPledged">{{ stats.total_pledged }}</h2>
-                            <small class="opacity-75" id="pledgedPct">{{ stats.pledged_conversion }}% voted</small>
-                        </div>
-                        <i class="bi bi-hand-thumbs-up fs-1 opacity-50"></i>
-                    </div>
+            <div class="card stat-card bg-info text-white h-100">
+                <div class="card-body py-3">
+                    <i class="bi bi-hand-thumbs-up stat-icon"></i>
+                    <h6 class="mb-1">Pledged</h6>
+                    <h2 class="mb-0" id="totalPledged">{{ stats.total_pledged }}</h2>
+                    <small class="opacity-75" id="pledgedPct">{{ stats.pledged_conversion }}% voted</small>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Vote Status Breakdown -->
-    <div class="row g-3 mb-4">
+    <!-- Vote Breakdown + Focal -->
+    <div class="row g-3 mb-3">
         <div class="col-md-6">
             <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Vote Status Breakdown</h5>
-                </div>
+                <div class="card-header"><i class="bi bi-pie-chart text-primary me-1"></i> Vote Breakdown</div>
                 <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-6 col-md-3 mb-3">
-                            <div class="border rounded p-3">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6 col-md-3">
+                            <div class="breakdown-box">
                                 <h4 class="text-secondary" id="notVoted">{{ stats.vote_breakdown.not_voted }}</h4>
                                 <small class="text-muted">Not Voted</small>
                             </div>
                         </div>
-                        <div class="col-6 col-md-3 mb-3">
-                            <div class="border rounded p-3 border-success">
+                        <div class="col-6 col-md-3">
+                            <div class="breakdown-box" style="border-color: var(--mv-green);">
                                 <h4 class="text-success" id="votedPledged">{{ stats.vote_breakdown.voted_pledged }}</h4>
-                                <small class="text-muted">Voted Pledged</small>
+                                <small class="text-muted">Pledged</small>
                             </div>
                         </div>
-                        <div class="col-6 col-md-3 mb-3">
-                            <div class="border rounded p-3 border-danger">
+                        <div class="col-6 col-md-3">
+                            <div class="breakdown-box" style="border-color: var(--mv-red);">
                                 <h4 class="text-danger" id="votedOther">{{ stats.vote_breakdown.voted_other }}</h4>
-                                <small class="text-muted">Voted Other</small>
+                                <small class="text-muted">Other</small>
                             </div>
                         </div>
-                        <div class="col-6 col-md-3 mb-3">
-                            <div class="border rounded p-3 border-warning">
+                        <div class="col-6 col-md-3">
+                            <div class="breakdown-box" style="border-color: #F4A261;">
                                 <h4 class="text-warning" id="undecided">{{ stats.vote_breakdown.undecided }}</h4>
                                 <small class="text-muted">Undecided</small>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Progress bar -->
-                    <div class="progress mt-3" style="height: 25px;">
+                    <div class="progress progress-thick">
                         <div class="progress-bar bg-success" id="progressPledged" style="width: {% if stats.total_voters > 0 %}{{ (stats.vote_breakdown.voted_pledged / stats.total_voters * 100)|round(1) }}{% else %}0{% endif %}%"></div>
                         <div class="progress-bar bg-danger" id="progressOther" style="width: {% if stats.total_voters > 0 %}{{ (stats.vote_breakdown.voted_other / stats.total_voters * 100)|round(1) }}{% else %}0{% endif %}%"></div>
                         <div class="progress-bar bg-warning" id="progressUndecided" style="width: {% if stats.total_voters > 0 %}{{ (stats.vote_breakdown.undecided / stats.total_voters * 100)|round(1) }}{% else %}0{% endif %}%"></div>
@@ -145,34 +141,20 @@
         {% if not focal_view %}
         <div class="col-md-6">
             <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-person-badge"></i> Focal Performance</h5>
-                </div>
-                <div class="card-body" style="max-height: 300px; overflow-y: auto;">
-                    <table class="table table-sm table-hover">
+                <div class="card-header"><i class="bi bi-person-badge text-primary me-1"></i> Focal Performance</div>
+                <div class="card-body p-0 focal-table">
+                    <table class="table table-sm table-hover mb-0">
                         <thead class="sticky-top bg-white">
-                            <tr>
-                                <th>Focal</th>
-                                <th class="text-center">Total</th>
-                                <th class="text-center">Voted</th>
-                                <th class="text-center">Left</th>
-                                <th class="text-end">%</th>
-                            </tr>
+                            <tr><th>Focal</th><th class="text-center">Total</th><th class="text-center">Voted</th><th class="text-center">Left</th><th class="text-end">%</th></tr>
                         </thead>
                         <tbody id="focalStats">
                             {% for focal in stats.focal_stats %}
                             <tr>
-                                <td>
-                                    <a href="/voters/list?focal_id={{ focal.id }}">{{ focal.name }}</a>
-                                </td>
+                                <td><a href="/voters/list?focal_id={{ focal.id }}">{{ focal.name }}</a></td>
                                 <td class="text-center">{{ focal.total }}</td>
-                                <td class="text-center text-success">{{ focal.voted }}</td>
+                                <td class="text-center text-success fw-semibold">{{ focal.voted }}</td>
                                 <td class="text-center text-warning">{{ focal.remaining }}</td>
-                                <td class="text-end">
-                                    <span class="badge {% if focal.percentage >= 75 %}bg-success{% elif focal.percentage >= 50 %}bg-warning{% else %}bg-secondary{% endif %}">
-                                        {{ focal.percentage }}%
-                                    </span>
-                                </td>
+                                <td class="text-end"><span class="badge {% if focal.percentage >= 75 %}bg-success{% elif focal.percentage >= 50 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{{ focal.percentage }}%</span></td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -185,20 +167,18 @@
 
     <!-- Candidate Votes -->
     {% if stats.candidate_stats %}
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="bi bi-trophy"></i> Votes per Candidate</h5>
-        </div>
+    <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-trophy text-primary me-1"></i> Votes per Candidate</div>
         <div class="card-body">
-            <div class="row g-3" id="candidateVotes">
+            <div class="row g-2" id="candidateVotes">
                 {% for c in stats.candidate_stats %}
                 <div class="col-6 col-md-3">
-                    <div class="card h-100 {% if c.is_pledged %}border-success{% elif c.id == 0 %}border-secondary{% endif %}">
-                        <div class="card-body text-center">
-                            {% if c.is_pledged %}<span class="badge bg-success mb-2">Our Candidate</span>{% endif %}
-                            {% if c.id == 0 %}<span class="badge bg-secondary mb-2">Unknown</span>{% endif %}
+                    <div class="card candidate-vote-card h-100 {% if c.is_pledged %}border-success{% elif c.id == 0 %}border-secondary{% endif %}">
+                        <div class="card-body py-3">
+                            {% if c.is_pledged %}<span class="badge bg-success mb-1"><i class="bi bi-star-fill"></i> Ours</span>{% endif %}
+                            {% if c.id == 0 %}<span class="badge bg-secondary mb-1">Unknown</span>{% endif %}
                             <h3 class="mb-1 {% if c.is_pledged %}text-success{% elif c.id == 0 %}text-secondary{% endif %}">{{ c.votes }}</h3>
-                            <h6 class="mb-0">{{ c.name }}</h6>
+                            <div class="fw-semibold small">{{ c.name }}</div>
                             <small class="text-muted">{{ c.party or '' }} {% if c.number %}#{{ c.number }}{% endif %}</small>
                         </div>
                     </div>
@@ -210,40 +190,21 @@
     {% endif %}
 
     <!-- Box Stats -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="bi bi-box"></i> Stats by Box</h5>
-        </div>
-        <div class="card-body">
+    <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-box text-primary me-1"></i> Stats by Box</div>
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Box</th>
-                            <th class="text-center">Total</th>
-                            <th class="text-center">Voted</th>
-                            <th class="text-center">Remaining</th>
-                            <th class="text-center">Pledged Voted</th>
-                            <th>Progress</th>
-                        </tr>
-                    </thead>
+                <table class="table table-hover mb-0">
+                    <thead><tr><th>Box</th><th class="text-center">Total</th><th class="text-center">Voted</th><th class="text-center d-none d-sm-table-cell">Left</th><th class="text-center d-none d-sm-table-cell">Pledged</th><th>Progress</th></tr></thead>
                     <tbody id="boxStats">
                         {% for box in stats.box_stats %}
                         <tr>
-                            <td>
-                                <a href="/voters/list?box_id={{ box.id }}">{{ box.name }}</a>
-                            </td>
+                            <td><a href="/voters/list?box_id={{ box.id }}">{{ box.name }}</a></td>
                             <td class="text-center">{{ box.total }}</td>
-                            <td class="text-center text-success">{{ box.voted }}</td>
-                            <td class="text-center text-warning">{{ box.remaining }}</td>
-                            <td class="text-center text-info">{{ box.pledged_voted }}</td>
-                            <td style="min-width: 100px;">
-                                <div class="progress">
-                                    <div class="progress-bar bg-success" style="width: {{ box.percentage }}%">
-                                        {{ box.percentage }}%
-                                    </div>
-                                </div>
-                            </td>
+                            <td class="text-center text-success fw-semibold">{{ box.voted }}</td>
+                            <td class="text-center text-warning d-none d-sm-table-cell">{{ box.remaining }}</td>
+                            <td class="text-center d-none d-sm-table-cell">{{ box.pledged_voted }}</td>
+                            <td style="min-width: 90px;"><div class="progress progress-thick"><div class="progress-bar bg-success" style="width: {{ box.percentage }}%"><span class="small">{{ box.percentage }}%</span></div></div></td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -254,43 +215,16 @@
 </div>
 {% endblock %}
 
-{% block extra_css %}
-<style>
-    .status-dot {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background-color: #28a745;
-        animation: pulse 2s ease-in-out infinite;
-    }
-    .status-dot.disconnected {
-        background-color: #dc3545;
-        animation: none;
-    }
-    @keyframes pulse {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.5; transform: scale(0.85); }
-    }
-</style>
-{% endblock %}
-
 {% block extra_js %}
 <script>
 function updateTimestamp() {
-    const now = new Date();
-    const time = now.toLocaleTimeString('en-US', { hour12: false });
-    document.getElementById('lastUpdated').textContent = 'Last updated: ' + time;
+    document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString('en-US', { hour12: false });
 }
 
-// Voting toggle
 async function loadVotingStatus() {
     try {
         const res = await fetch('/admin/voting-status');
-        if (res.ok) {
-            const data = await res.json();
-            updateVotingUI(data.voting_open);
-        }
+        if (res.ok) { updateVotingUI((await res.json()).voting_open); }
     } catch (e) {}
 }
 
@@ -299,17 +233,14 @@ function updateVotingUI(isOpen) {
     const text = document.getElementById('votingStatusText');
     const btn = document.getElementById('votingToggleBtn');
     if (!toggle) return;
-
     if (isOpen) {
-        toggle.className = 'alert alert-success d-flex align-items-center justify-content-between mb-4';
-        text.textContent = 'OPEN - Operators can mark votes';
-        btn.className = 'btn btn-sm btn-danger';
-        btn.innerHTML = '<i class="bi bi-lock"></i> Close Voting';
+        toggle.className = 'alert alert-success voting-banner d-flex align-items-center justify-content-between mb-3';
+        text.textContent = 'OPEN — Operators can mark votes';
+        btn.className = 'btn btn-sm btn-danger'; btn.innerHTML = '<i class="bi bi-lock"></i> Close';
     } else {
-        toggle.className = 'alert alert-danger d-flex align-items-center justify-content-between mb-4';
-        text.textContent = 'CLOSED - Vote marking is disabled';
-        btn.className = 'btn btn-sm btn-success';
-        btn.innerHTML = '<i class="bi bi-unlock"></i> Open Voting';
+        toggle.className = 'alert alert-danger voting-banner d-flex align-items-center justify-content-between mb-3';
+        text.textContent = 'CLOSED — Vote marking disabled';
+        btn.className = 'btn btn-sm btn-success'; btn.innerHTML = '<i class="bi bi-unlock"></i> Open';
     }
     toggle.dataset.open = isOpen;
 }
@@ -317,70 +248,38 @@ function updateVotingUI(isOpen) {
 async function toggleVoting() {
     const toggle = document.getElementById('votingToggle');
     const currentOpen = toggle.dataset.open === 'true';
-    const action = currentOpen ? 'close' : 'open';
-    if (!confirm(`Are you sure you want to ${action} voting?`)) return;
-
+    if (!confirm(`Are you sure you want to ${currentOpen ? 'close' : 'open'} voting?`)) return;
     try {
-        const res = await fetch('/admin/voting-status', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ voting_open: !currentOpen })
-        });
-        if (res.ok) {
-            const data = await res.json();
-            updateVotingUI(data.voting_open);
-            showToast(data.message, 'success');
-        }
-    } catch (e) {
-        showToast('Failed to toggle voting', 'danger');
-    }
+        const res = await fetch('/admin/voting-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ voting_open: !currentOpen }) });
+        if (res.ok) { const data = await res.json(); updateVotingUI(data.voting_open); showToast(data.message, 'success'); }
+    } catch (e) { showToast('Failed to toggle voting', 'danger'); }
 }
 
-// Show current time on page load
-document.addEventListener('DOMContentLoaded', function() {
-    loadVotingStatus();
-    updateTimestamp();
-});
+document.addEventListener('DOMContentLoaded', function() { loadVotingStatus(); updateTimestamp(); });
 
 async function refreshStats() {
     const dot = document.querySelector('.status-dot');
     try {
-        const response = await fetch('/api/dashboard/stats');
-        const stats = await response.json();
-
-        // Update summary cards
+        const stats = await (await fetch('/api/dashboard/stats')).json();
         document.getElementById('totalVoters').textContent = stats.total_voters;
         document.getElementById('totalVoted').textContent = stats.total_voted;
         document.getElementById('turnoutPct').textContent = stats.turnout_percentage + '%';
         document.getElementById('remaining').textContent = stats.remaining;
         document.getElementById('totalPledged').textContent = stats.total_pledged;
         document.getElementById('pledgedPct').textContent = stats.pledged_conversion + '% voted';
-
-        // Update breakdown
         document.getElementById('notVoted').textContent = stats.vote_breakdown.not_voted;
         document.getElementById('votedPledged').textContent = stats.vote_breakdown.voted_pledged;
         document.getElementById('votedOther').textContent = stats.vote_breakdown.voted_other;
         document.getElementById('undecided').textContent = stats.vote_breakdown.undecided;
-
-        // Update progress bars
         if (stats.total_voters > 0) {
             document.getElementById('progressPledged').style.width = (stats.vote_breakdown.voted_pledged / stats.total_voters * 100) + '%';
             document.getElementById('progressOther').style.width = (stats.vote_breakdown.voted_other / stats.total_voters * 100) + '%';
             document.getElementById('progressUndecided').style.width = (stats.vote_breakdown.undecided / stats.total_voters * 100) + '%';
         }
-
-        // Update timestamp and status dot on success
-        updateTimestamp();
-        dot.classList.remove('disconnected');
-
-        showToast('Stats refreshed', 'success');
-    } catch (error) {
-        dot.classList.add('disconnected');
-        showToast('Failed to refresh stats', 'danger');
-    }
+        updateTimestamp(); dot.classList.remove('disconnected');
+    } catch (error) { dot.classList.add('disconnected'); showToast('Failed to refresh', 'danger'); }
 }
 
-// Auto-refresh every 60 seconds (optimized for 20+ concurrent users)
 setInterval(refreshStats, 60000);
 </script>
 {% endblock %}

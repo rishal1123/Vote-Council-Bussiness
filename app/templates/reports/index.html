@@ -4,38 +4,22 @@
 
 {% block extra_css %}
 <style>
-    .chart-container {
-        position: relative;
-        height: 280px;
-    }
-    .stat-card { text-align: center; }
-    .stat-card h2 { font-size: 2.2rem; font-weight: bold; margin-bottom: 0; }
-    .stat-card .stat-label { font-size: 0.8rem; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px; }
-    .stat-card .stat-sub { font-size: 0.75rem; opacity: 0.7; }
-    .candidate-rank { font-size: 1.5rem; font-weight: 700; color: #1B2A4A; }
-    .candidate-rank.first { color: #007E3A; }
-    .candidate-bar { height: 8px; border-radius: 4px; background: #e9ecef; overflow: hidden; }
-    .candidate-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
-    .report-section-title {
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: #8D99AE;
-        font-weight: 600;
-        margin-bottom: 0.75rem;
-    }
-    .big-turnout {
-        font-size: 4rem;
-        font-weight: 800;
-        line-height: 1;
-        background: linear-gradient(135deg, #007E3A, #00B4D8);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
+    .chart-container { position: relative; height: 260px; }
+    .rpt-stat { text-align: center; }
+    .rpt-stat h2 { font-size: 1.8rem; font-weight: 700; margin-bottom: 0; }
+    .rpt-stat .stat-label { font-size: 0.7rem; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px; }
+    .rpt-stat .stat-sub { font-size: 0.72rem; opacity: 0.7; }
+    .candidate-rank { font-size: 1.3rem; font-weight: 700; color: var(--mv-dark); min-width: 32px; }
+    .candidate-rank.first { color: var(--mv-green); }
+    .candidate-bar { height: 8px; border-radius: var(--radius-pill); background: #eef0f2; overflow: hidden; }
+    .candidate-bar-fill { height: 100%; border-radius: var(--radius-pill); transition: width 0.6s ease; }
+    .report-section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: #8D99AE; font-weight: 600; margin-bottom: 0.75rem; }
+    .big-turnout { font-size: 3.5rem; font-weight: 800; line-height: 1; background: linear-gradient(135deg, var(--mv-green), var(--mv-lagoon)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .progress-stacked { height: 8px; border-radius: var(--radius-pill); }
     @media (max-width: 576px) {
-        .stat-card h2 { font-size: 1.5rem; }
+        .rpt-stat h2 { font-size: 1.3rem; }
         .big-turnout { font-size: 2.5rem; }
+        .chart-container { height: 200px; }
     }
 </style>
 {% endblock %}
@@ -43,20 +27,15 @@
 {% block content %}
 <div class="container-fluid">
     <!-- Header -->
-    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-4 gap-2">
-        <h1 class="h3 mb-0">
-            <i class="bi bi-bar-chart"></i> Reports & Analytics
-        </h1>
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-3 gap-2 page-header">
+        <div>
+            <h1 class="h4 mb-0"><i class="bi bi-bar-chart text-primary"></i> Reports & Analytics</h1>
+            <small class="text-muted">Real-time election data and insights</small>
+        </div>
         <div class="d-flex flex-wrap gap-2">
-            <a href="/reports/export/voters" class="btn btn-export btn-sm">
-                <i class="bi bi-download"></i> Voters CSV
-            </a>
-            <a href="/reports/export/votes" class="btn btn-export btn-sm">
-                <i class="bi bi-download"></i> Votes CSV
-            </a>
-            <button class="btn btn-outline-primary btn-sm" onclick="loadAllData()">
-                <i class="bi bi-arrow-clockwise"></i> Refresh
-            </button>
+            <a href="/reports/export/voters" class="btn btn-export btn-sm"><i class="bi bi-download"></i> Voters</a>
+            <a href="/reports/export/votes" class="btn btn-export btn-sm"><i class="bi bi-download"></i> Votes</a>
+            <button class="btn btn-outline-primary btn-sm" onclick="loadAllData()"><i class="bi bi-arrow-clockwise"></i></button>
         </div>
     </div>
 
@@ -74,7 +53,7 @@
         <div class="col-12 col-md-8">
             <div class="row g-3 h-100">
                 <div class="col-6 col-md-3">
-                    <div class="card stat-card bg-success text-white h-100">
+                    <div class="card rpt-stat bg-success text-white h-100">
                         <div class="card-body py-3">
                             <div class="stat-label">Voted Pledged</div>
                             <h2 id="votedPledged">-</h2>
@@ -82,7 +61,7 @@
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="card stat-card bg-danger text-white h-100">
+                    <div class="card rpt-stat bg-danger text-white h-100">
                         <div class="card-body py-3">
                             <div class="stat-label">Voted Other</div>
                             <h2 id="votedOther">-</h2>
@@ -90,7 +69,7 @@
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="card stat-card bg-warning h-100">
+                    <div class="card rpt-stat bg-warning h-100">
                         <div class="card-body py-3">
                             <div class="stat-label">Undecided</div>
                             <h2 id="undecided">-</h2>
@@ -98,7 +77,7 @@
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="card stat-card h-100" style="background: #8D99AE; color: white;">
+                    <div class="card rpt-stat bg-secondary text-white h-100">
                         <div class="card-body py-3">
                             <div class="stat-label">Not Voted</div>
                             <h2 id="notVoted">-</h2>
@@ -106,7 +85,7 @@
                     </div>
                 </div>
                 <div class="col-6 col-md-6">
-                    <div class="card stat-card bg-primary text-white h-100">
+                    <div class="card rpt-stat bg-primary text-white h-100">
                         <div class="card-body py-3">
                             <div class="stat-label">Total Pledged Voters</div>
                             <h2 id="totalPledged">-</h2>
@@ -115,7 +94,7 @@
                     </div>
                 </div>
                 <div class="col-6 col-md-6">
-                    <div class="card stat-card bg-info text-white h-100">
+                    <div class="card rpt-stat bg-info text-white h-100">
                         <div class="card-body py-3">
                             <div class="stat-label">Pledged Turnout</div>
                             <h2 id="pledgedTurnout">-</h2>
@@ -132,7 +111,7 @@
         <div class="col-md-6">
             <div class="card h-100">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-trophy"></i> Candidate Results</h5>
+                    <h5 class="mb-0"><i class="bi bi-trophy text-primary"></i> Candidate Results</h5>
                 </div>
                 <div class="card-body" id="candidateResults">
                     <p class="text-center text-muted">Loading...</p>
@@ -142,7 +121,7 @@
         <div class="col-md-6">
             <div class="card h-100">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Vote Status Distribution</h5>
+                    <h5 class="mb-0"><i class="bi bi-pie-chart text-primary"></i> Vote Status Distribution</h5>
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
@@ -158,7 +137,7 @@
         <div class="col-md-4">
             <div class="card h-100">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Pledge Status</h5>
+                    <h5 class="mb-0"><i class="bi bi-pie-chart text-primary"></i> Pledge Status</h5>
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
@@ -170,7 +149,7 @@
         <div class="col-md-4">
             <div class="card h-100">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-people"></i> Gender</h5>
+                    <h5 class="mb-0"><i class="bi bi-people text-primary"></i> Gender</h5>
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
@@ -182,7 +161,7 @@
         <div class="col-md-4">
             <div class="card h-100">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Age Groups</h5>
+                    <h5 class="mb-0"><i class="bi bi-bar-chart text-primary"></i> Age Groups</h5>
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
@@ -196,7 +175,7 @@
     <!-- Box Performance -->
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="bi bi-box"></i> Performance by Box</h5>
+            <h5 class="mb-0"><i class="bi bi-box text-primary"></i> Performance by Box</h5>
             <small class="text-muted" id="boxCount"></small>
         </div>
         <div class="card-body p-0">
@@ -225,7 +204,7 @@
     <!-- Focal Performance -->
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="bi bi-person-badge"></i> Performance by Focal</h5>
+            <h5 class="mb-0"><i class="bi bi-person-badge text-primary"></i> Performance by Focal</h5>
             <small class="text-muted" id="focalCount"></small>
         </div>
         <div class="card-body p-0">
@@ -387,7 +366,7 @@ async function loadBoxData() {
                 <span class="badge bg-${box.turnout_pct >= 75 ? 'success' : box.turnout_pct >= 50 ? 'warning' : 'secondary'}">${box.turnout_pct}%</span>
             </td>
             <td style="min-width: 100px;">
-                <div class="progress" style="height: 16px; border-radius: 8px;">
+                <div class="progress" style="height: 10px;">
                     <div class="progress-bar bg-success" style="width: ${box.voted_pledged/box.total*100}%"></div>
                     <div class="progress-bar bg-danger" style="width: ${box.voted_other/box.total*100}%"></div>
                     <div class="progress-bar bg-warning" style="width: ${box.undecided/box.total*100}%"></div>
@@ -420,7 +399,7 @@ async function loadFocalData() {
                 <span class="badge bg-${focal.turnout_pct >= 75 ? 'success' : focal.turnout_pct >= 50 ? 'warning' : 'secondary'}">${focal.turnout_pct}%</span>
             </td>
             <td style="min-width: 100px;">
-                <div class="progress" style="height: 16px; border-radius: 8px;">
+                <div class="progress" style="height: 10px;">
                     <div class="progress-bar bg-success" style="width: ${focal.voted_pledged/focal.total*100}%"></div>
                     <div class="progress-bar bg-danger" style="width: ${focal.voted_other/focal.total*100}%"></div>
                     <div class="progress-bar bg-warning" style="width: ${focal.undecided/focal.total*100}%"></div>

@@ -4,15 +4,10 @@
 
 {% block extra_css %}
 <style>
-    .bulk-action-bar {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: rgba(33, 37, 41, 0.95);
-        padding: 12px 0;
-        z-index: 1050;
-        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    .voter-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+    .voter-avatar-ph { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg,#e9ecef,#dee2e6); display: inline-flex; align-items: center; justify-content: center; }
+    @media (max-width: 576px) {
+        .filter-row .col-6 { flex: 0 0 50%; }
     }
 </style>
 {% endblock %}
@@ -20,33 +15,25 @@
 {% block content %}
 <div class="container-fluid">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">
-            <i class="bi bi-people"></i> Voters
-            <span class="badge bg-secondary" id="voterCount">0</span>
-        </h1>
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-3 gap-2 page-header">
+        <div>
+            <h1 class="h4 mb-0"><i class="bi bi-people text-primary"></i> Voters <span class="badge bg-secondary rounded-pill" id="voterCount">0</span></h1>
+            <small class="text-muted d-none d-sm-inline">Manage voter records and pledge status</small>
+        </div>
         <div class="d-flex flex-wrap gap-2">
-            <button class="btn btn-outline-secondary" onclick="openPrintView()">
-                <i class="bi bi-printer"></i> Print List
-            </button>
-            <button class="btn btn-export" onclick="exportFilteredCSV()">
-                <i class="bi bi-download"></i> CSV
-            </button>
-            <button class="btn btn-export" onclick="exportFilteredPDF()">
-                <i class="bi bi-file-earmark-pdf"></i> PDF
-            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="openPrintView()"><i class="bi bi-printer"></i><span class="d-none d-md-inline"> Print</span></button>
+            <button class="btn btn-export btn-sm" onclick="exportFilteredCSV()"><i class="bi bi-download"></i><span class="d-none d-md-inline"> CSV</span></button>
+            <button class="btn btn-export btn-sm" onclick="exportFilteredPDF()"><i class="bi bi-file-earmark-pdf"></i><span class="d-none d-md-inline"> PDF</span></button>
             {% if user.role.value in ['admin', 'operator'] %}
-            <a href="/voters/new" class="btn btn-primary">
-                <i class="bi bi-plus-lg"></i> Add Voter
-            </a>
+            <a href="/voters/new" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i><span class="d-none d-md-inline"> Add</span></a>
             {% endif %}
         </div>
     </div>
 
     <!-- Filters -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <form id="filterForm" class="row g-3">
+    <div class="card mb-3">
+        <div class="card-body py-3">
+            <form id="filterForm" class="row g-2 filter-row">
                 <div class="col-12 col-sm-6 col-md-4">
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>

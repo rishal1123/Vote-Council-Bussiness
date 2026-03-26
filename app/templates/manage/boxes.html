@@ -4,10 +4,11 @@
 
 {% block content %}
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">
-            <i class="bi bi-box"></i> Boxes
-        </h1>
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-3 gap-2 page-header">
+        <div>
+            <h1 class="h4 mb-0"><i class="bi bi-box text-primary"></i> Boxes</h1>
+            <small class="text-muted">Manage ballot boxes and locations</small>
+        </div>
         <button class="btn btn-primary" onclick="showAddModal()">
             <i class="bi bi-plus-lg"></i> Add Box
         </button>
@@ -94,13 +95,13 @@ function renderBoxes() {
             <td><strong>${box.name}</strong></td>
             <td class="d-none d-md-table-cell">${box.location || '-'}</td>
             <td class="text-center">
-                <a href="/voters/list?box_id=${box.id}" class="badge bg-primary">${box.voter_count}</a>
+                <a href="/voters/list?box_id=${box.id}" class="badge bg-primary rounded-pill">${box.voter_count}</a>
             </td>
             <td class="text-center">
-                <button class="btn btn-sm btn-outline-primary" style="min-height:38px" onclick="showEditModal(${box.id})">
+                <button class="btn btn-sm btn-outline-primary me-1" onclick="showEditModal(${box.id})">
                     <i class="bi bi-pencil"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-danger" style="min-height:38px" onclick="deleteBox(${box.id})">
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteBox(${box.id})">
                     <i class="bi bi-trash"></i>
                 </button>
             </td>

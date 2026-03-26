@@ -4,10 +4,11 @@
 
 {% block content %}
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">
-            <i class="bi bi-people-fill"></i> Users
-        </h1>
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-3 gap-2 page-header">
+        <div>
+            <h1 class="h4 mb-0"><i class="bi bi-people-fill text-primary"></i> Users</h1>
+            <small class="text-muted">Manage user accounts and roles</small>
+        </div>
         <button class="btn btn-primary" onclick="showAddModal()">
             <i class="bi bi-plus-lg"></i> Add User
         </button>
@@ -105,11 +106,11 @@ function renderUsers() {
         <tr>
             <td><strong>${user.username}</strong></td>
             <td>
-                <span class="badge ${getRoleBadge(user.role)}">${user.role}</span>
+                <span class="badge rounded-pill ${getRoleBadge(user.role)}">${user.role}</span>
             </td>
             <td class="d-none d-md-table-cell">${new Date(user.created_at).toLocaleDateString()}</td>
             <td class="text-center">
-                <button class="btn btn-sm btn-outline-danger" style="min-height:38px" onclick="deleteUser(${user.id}, '${user.username}')">
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${user.id}, '${user.username}')">
                     <i class="bi bi-trash"></i>
                 </button>
             </td>
