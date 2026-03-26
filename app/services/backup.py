@@ -16,15 +16,25 @@ def ensure_backup_dir():
 def get_db_path():
     """Extract the SQLite file path from DATABASE_URL."""
     url = settings.DATABASE_URL
-    # sqlite:///./votecouncil.db or sqlite:///data/votecouncil.db
+    # sqlite:///./votecouncil.db -> ./votecouncil.db
+    # sqlite:///data/votecouncil.db -> data/votecouncil.db
+    # sqlite:////absolute/path.db -> /absolute/path.db
     path = url.replace("sqlite:///", "")
     if path.startswith("./"):
         path = path[2:]
-    # If path doesn't exist, try absolute path from working directory
-    if not os.path.exists(path):
-        abs_path = os.path.abspath(path)
-        if os.path.exists(abs_path):
-            return abs_path
+
+    # Try candidates in order
+    candidates = [
+        path,
+        os.path.abspath(path),
+        os.path.join("/app", path),
+        "votecouncil.db",
+        "/app/data/votecouncil.db",
+        "data/votecouncil.db",
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            return p
     return path
 
 
