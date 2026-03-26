@@ -9,6 +9,7 @@ services:
     volumes:
       - db-data:/app/data
       - uploads:/app/uploads
+      - backups:/app/backups
     environment:
       - DATABASE_URL=sqlite:///data/votecouncil.db
       - SECRET_KEY=change-this-in-production
@@ -20,3 +21,4 @@ services:
 volumes:
   db-data:
   uploads:
+  backups:

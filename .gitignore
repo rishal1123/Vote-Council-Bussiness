@@ -11,6 +11,7 @@ ENV/
 # Database
 *.db
 *.sqlite3
+backups/
 
 # Uploads (keep folder, ignore files)
 uploads/*

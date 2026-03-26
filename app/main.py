@@ -4,10 +4,13 @@ from fastapi.responses import RedirectResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
+import asyncio
+
 from app.config import settings
 from app.database import init_db, SessionLocal
 from app.services.auth import create_default_admin, get_current_user
 from app.services.logging import log_activity, Actions
+from app.services.backup import create_backup, backup_scheduler
 from app.routers import auth, voters, focals, candidates, boxes, import_data, dashboard, pages, admin, reports, voting
 
 # Create FastAPI app
@@ -76,7 +79,10 @@ async def startup_event():
     db = SessionLocal()
     try:
         create_default_admin(db)
+        create_backup("startup")
         log_activity(db, Actions.APP_STARTUP, details="Application started successfully")
+        # Start background backup scheduler
+        asyncio.create_task(backup_scheduler())
     except Exception as e:
         log_activity(db, Actions.APP_ERROR, details=f"Startup error: {str(e)}")
         raise

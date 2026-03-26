@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
@@ -13,6 +13,7 @@ from app.models.voter import voter_focal
 from app.services.auth import require_role
 from app.services.logging import log_activity, Actions
 from app.services.settings import get_column_settings, save_column_settings, DEFAULT_COLUMNS, is_voting_open, set_voting_open
+from app.services.backup import list_backups, create_backup, delete_backup, BACKUP_DIR
 from app.config import settings
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -267,3 +268,73 @@ async def toggle_voting_status(
     )
 
     return {"voting_open": new_status, "message": f"Voting {status_text}"}
+
+
+# --- Backups ---
+
+@router.get("/backups", response_class=HTMLResponse)
+async def backups_page(
+    request: Request,
+    user: User = Depends(require_role(UserRole.admin))
+):
+    """Render backups page."""
+    return templates.TemplateResponse(
+        "admin/backups.html",
+        {"request": request, "user": user}
+    )
+
+
+@router.get("/backups/list")
+async def get_backups(
+    user: User = Depends(require_role(UserRole.admin))
+):
+    """List all database backups."""
+    return list_backups()
+
+
+@router.post("/backups/create")
+async def create_manual_backup(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(UserRole.admin))
+):
+    """Create a manual database backup."""
+    filename = create_backup("manual")
+    if filename:
+        log_activity(db, "backup_create", user, details=f"Created backup: {filename}",
+                     ip_address=request.client.host if request.client else None)
+        return {"message": "Backup created", "filename": filename}
+    raise HTTPException(status_code=500, detail="Failed to create backup")
+
+
+@router.get("/backups/download/{filename}")
+async def download_backup(
+    filename: str,
+    user: User = Depends(require_role(UserRole.admin))
+):
+    """Download a backup file."""
+    import os
+    # Sanitize filename to prevent path traversal
+    safe_name = os.path.basename(filename)
+    path = os.path.join(BACKUP_DIR, safe_name)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Backup not found")
+    return FileResponse(path, filename=safe_name,
+                       media_type="application/octet-stream")
+
+
+@router.delete("/backups/{filename}")
+async def remove_backup(
+    filename: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(UserRole.admin))
+):
+    """Delete a backup file."""
+    import os
+    safe_name = os.path.basename(filename)
+    if delete_backup(safe_name):
+        log_activity(db, "backup_delete", user, details=f"Deleted backup: {safe_name}",
+                     ip_address=request.client.host if request.client else None)
+        return {"message": "Backup deleted"}
+    raise HTTPException(status_code=404, detail="Backup not found")
