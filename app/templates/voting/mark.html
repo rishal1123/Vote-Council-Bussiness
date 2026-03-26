@@ -156,7 +156,7 @@
             </div>
 
             <!-- Quick Action: Vote as Pledged (only for pledged voters) -->
-            <div id="quickPledgedSection" class="card-body border-top d-none {% if not voting_open %}d-none{% endif %}">
+            <div id="quickPledgedSection" class="card-body border-top d-none">
                 <button class="btn btn-success btn-lg w-100 py-3" onclick="quickVoteAsPledged()">
                     <i class="bi bi-star-fill"></i> Vote as Pledged (Our Candidate)
                 </button>
@@ -425,9 +425,10 @@ function displayVoter(voter) {
     document.getElementById('candidateSection').classList.add('d-none');
     document.getElementById('confirmBtn').disabled = true;
 
-    // Show quick "Vote as Pledged" button for pledged voters
+    // Show quick "Vote as Pledged" button for pledged voters (only when voting is open)
     const quickSection = document.getElementById('quickPledgedSection');
-    if (voter.is_pledged === 'yes' && voter.vote_status === 'not_voted') {
+    const votingOpen = {{ 'true' if voting_open else 'false' }};
+    if (votingOpen && voter.is_pledged === 'yes' && voter.vote_status === 'not_voted') {
         quickSection.classList.remove('d-none');
     } else {
         quickSection.classList.add('d-none');
