@@ -208,13 +208,14 @@
                             <th class="text-center">Total</th>
                             <th class="text-center d-none d-md-table-cell">Voted Pledged</th>
                             <th class="text-center d-none d-md-table-cell">Voted Other</th>
+                            <th class="text-center d-none d-md-table-cell">Undisclosed</th>
                             <th class="text-center">Remaining</th>
                             <th class="text-center">Turnout</th>
                             <th style="min-width: 100px;">Progress</th>
                         </tr>
                     </thead>
                     <tbody id="boxTable">
-                        <tr><td colspan="7" class="text-center py-3">Loading...</td></tr>
+                        <tr><td colspan="8" class="text-center py-3">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -236,13 +237,14 @@
                             <th class="text-center">Total</th>
                             <th class="text-center d-none d-md-table-cell">Voted Pledged</th>
                             <th class="text-center d-none d-md-table-cell">Voted Other</th>
+                            <th class="text-center d-none d-md-table-cell">Undisclosed</th>
                             <th class="text-center">Remaining</th>
                             <th class="text-center">Turnout</th>
                             <th style="min-width: 100px;">Progress</th>
                         </tr>
                     </thead>
                     <tbody id="focalTable">
-                        <tr><td colspan="7" class="text-center py-3">Loading...</td></tr>
+                        <tr><td colspan="8" class="text-center py-3">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -379,6 +381,7 @@ async function loadBoxData() {
             <td class="text-center">${box.total}</td>
             <td class="text-center text-success d-none d-md-table-cell">${box.voted_pledged}</td>
             <td class="text-center text-danger d-none d-md-table-cell">${box.voted_other}</td>
+            <td class="text-center text-secondary d-none d-md-table-cell">${box.undecided}</td>
             <td class="text-center text-warning">${box.not_voted}</td>
             <td class="text-center">
                 <span class="badge bg-${box.turnout_pct >= 75 ? 'success' : box.turnout_pct >= 50 ? 'warning' : 'secondary'}">${box.turnout_pct}%</span>
@@ -411,6 +414,7 @@ async function loadFocalData() {
             <td class="text-center">${focal.total}</td>
             <td class="text-center text-success d-none d-md-table-cell">${focal.voted_pledged}</td>
             <td class="text-center text-danger d-none d-md-table-cell">${focal.voted_other}</td>
+            <td class="text-center text-secondary d-none d-md-table-cell">${focal.undecided}</td>
             <td class="text-center text-warning">${focal.not_voted}</td>
             <td class="text-center">
                 <span class="badge bg-${focal.turnout_pct >= 75 ? 'success' : focal.turnout_pct >= 50 ? 'warning' : 'secondary'}">${focal.turnout_pct}%</span>
