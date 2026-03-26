@@ -30,16 +30,9 @@ async def voting_page(
     user: User = Depends(require_role(UserRole.admin, UserRole.operator))
 ):
     """Render the voting day mark page (admin/operator only)."""
-    voting_open = is_voting_open()
-    # Admin can always access, operators only when voting is open
-    if not voting_open and user.role != UserRole.admin:
-        return templates.TemplateResponse(
-            "voting/closed.html",
-            {"request": request, "user": user}
-        )
     return templates.TemplateResponse(
         "voting/mark.html",
-        {"request": request, "user": user}
+        {"request": request, "user": user, "voting_open": is_voting_open() or user.role == UserRole.admin}
     )
 
 
