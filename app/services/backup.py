@@ -20,6 +20,11 @@ def get_db_path():
     path = url.replace("sqlite:///", "")
     if path.startswith("./"):
         path = path[2:]
+    # If path doesn't exist, try absolute path from working directory
+    if not os.path.exists(path):
+        abs_path = os.path.abspath(path)
+        if os.path.exists(abs_path):
+            return abs_path
     return path
 
 
