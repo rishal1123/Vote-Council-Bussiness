@@ -147,23 +147,6 @@
                         <small>Voted at: {{ voter.voted_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
                     </p>
                     {% endif %}
-
-                    <hr>
-
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-success" onclick="updateStatus('voted_pledged')">
-                            <i class="bi bi-check-circle"></i> Voted Pledged
-                        </button>
-                        <button class="btn btn-danger" onclick="updateStatus('voted_other')">
-                            <i class="bi bi-x-circle"></i> Voted Other
-                        </button>
-                        <button class="btn btn-warning" onclick="updateStatus('undecided')">
-                            <i class="bi bi-question-circle"></i> Undecided
-                        </button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="updateStatus('not_voted')">
-                            <i class="bi bi-arrow-counterclockwise"></i> Reset
-                        </button>
-                    </div>
                 </div>
             </div>
             {% endif %}
@@ -175,35 +158,6 @@
 {% block extra_js %}
 <script>
 const voterId = {{ voter.id }};
-
-async function updateStatus(status) {
-    try {
-        const response = await fetch(`/voters/${voterId}/status`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ vote_status: status })
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            const badge = document.getElementById('currentStatus');
-            badge.textContent = data.vote_status.replace('_', ' ');
-
-            // Update badge color
-            badge.className = 'badge fs-5 ';
-            if (status === 'not_voted') badge.className += 'bg-secondary';
-            else if (status === 'voted_pledged') badge.className += 'bg-success';
-            else if (status === 'voted_other') badge.className += 'bg-danger';
-            else badge.className += 'bg-warning';
-
-            showToast('Status updated', 'success');
-        } else {
-            showToast('Failed to update status', 'danger');
-        }
-    } catch (error) {
-        showToast('Error updating status', 'danger');
-    }
-}
 
 async function uploadPhoto() {
     const input = document.getElementById('photoInput');
