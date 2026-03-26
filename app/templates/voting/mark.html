@@ -7,8 +7,11 @@
     .vote-container { max-width: 640px; margin: 0 auto; }
 
     /* Search toggle pills */
-    .search-toggle .btn { border-radius: 50px; padding: 10px 20px; font-weight: 500; }
-    .search-toggle .btn.active { box-shadow: 0 2px 8px rgba(13,110,253,0.3); }
+    .search-toggle { display: flex; gap: 0; }
+    .search-toggle .btn { padding: 10px 20px; font-weight: 500; border-radius: 0; }
+    .search-toggle .btn:first-child { border-radius: 50px 0 0 50px; }
+    .search-toggle .btn:last-child { border-radius: 0 50px 50px 0; }
+    .search-toggle .btn.active { box-shadow: 0 2px 8px rgba(13,110,253,0.3); z-index: 1; }
 
     /* Search inputs */
     .search-box { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
@@ -120,7 +123,7 @@
         <!-- Search Section -->
         <div class="search-box mb-3">
             <!-- Mode Toggle -->
-            <div class="search-toggle d-flex gap-2 mb-3">
+            <div class="search-toggle mb-3">
                 <button type="button" class="btn btn-sm btn-outline-primary active flex-fill" id="modeBox" onclick="setSearchMode('box')">
                     <i class="bi bi-box"></i> Box#
                 </button>
