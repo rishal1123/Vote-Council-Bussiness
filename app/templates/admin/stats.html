@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}System Stats - VoteCouncil{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-4 gap-2">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-cpu"></i> System Stats
+        </h1>
+        <button class="btn btn-outline-primary" onclick="loadStats()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+    </div>
+
+    <div id="statsContent">
+        <div class="text-center py-5">
+            <div class="spinner-border"></div>
+            <p class="mt-2">Loading stats...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', loadStats);
+
+async function loadStats() {
+    try {
+        const res = await fetch('/admin/stats/data');
+        const s = await res.json();
+        const c = document.getElementById('statsContent');
+
+        function bar(pct, color) {
+            return `<div class="progress" style="height:20px;border-radius:10px;">
+                <div class="progress-bar bg-${pct > 80 ? 'danger' : pct > 60 ? 'warning' : color}" style="width:${pct}%;border-radius:10px;">${pct}%</div>
+            </div>`;
+        }
+
+        c.innerHTML = `
+            <!-- Database & Records -->
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="bi bi-database fs-3 text-primary"></i>
+                            <h3 class="mt-2 mb-0">${s.database.total_size_mb} MB</h3>
+                            <small class="text-muted">Database Size</small>
+                            <div class="mt-1"><small class="text-muted">WAL: ${s.database.wal_size_mb} MB</small></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="bi bi-people fs-3 text-success"></i>
+                            <h3 class="mt-2 mb-0">${s.records.voters.toLocaleString()}</h3>
+                            <small class="text-muted">Voters</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="bi bi-images fs-3 text-info"></i>
+                            <h3 class="mt-2 mb-0">${s.storage.uploads_count}</h3>
+                            <small class="text-muted">Photos (${s.storage.uploads_mb} MB)</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="bi bi-hdd fs-3 text-warning"></i>
+                            <h3 class="mt-2 mb-0">${s.storage.backups_count}</h3>
+                            <small class="text-muted">Backups (${s.storage.backups_mb} MB)</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Records Breakdown -->
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="bi bi-list-ol"></i> Records</h5></div>
+                <div class="card-body">
+                    <div class="row g-3 text-center">
+                        <div class="col-4 col-md-2">
+                            <h4>${s.records.voters.toLocaleString()}</h4>
+                            <small class="text-muted">Voters</small>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <h4>${s.records.boxes}</h4>
+                            <small class="text-muted">Boxes</small>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <h4>${s.records.focals}</h4>
+                            <small class="text-muted">Focals</small>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <h4>${s.records.candidates}</h4>
+                            <small class="text-muted">Candidates</small>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <h4>${s.records.users}</h4>
+                            <small class="text-muted">Users</small>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <h4>${s.records.logs.toLocaleString()}</h4>
+                            <small class="text-muted">Log Entries</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Resources -->
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="bi bi-cpu"></i> System Resources</h5></div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <label class="form-label d-flex justify-content-between">
+                                <span>CPU (${s.system.cpu_count} cores)</span>
+                                <strong>${s.system.cpu_percent}%</strong>
+                            </label>
+                            ${bar(s.system.cpu_percent, 'primary')}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label d-flex justify-content-between">
+                                <span>Memory (${s.system.memory_used_mb} / ${s.system.memory_total_mb} MB)</span>
+                                <strong>${s.system.memory_percent}%</strong>
+                            </label>
+                            ${bar(s.system.memory_percent, 'success')}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label d-flex justify-content-between">
+                                <span>Disk (${s.system.disk_used_gb} / ${s.system.disk_total_gb} GB)</span>
+                                <strong>${s.system.disk_percent}%</strong>
+                            </label>
+                            ${bar(s.system.disk_percent, 'info')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Server Info -->
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="bi bi-info-circle"></i> Server Info</h5></div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Platform:</strong> ${escapeHtml(s.system.platform)}</p>
+                            <p class="mb-0"><strong>Python:</strong> ${escapeHtml(s.system.python)}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>DB File:</strong> ${s.database.size_mb} MB + ${s.database.wal_size_mb} MB WAL</p>
+                            <p class="mb-0"><strong>Total Storage:</strong> ${(s.database.total_size_mb + s.storage.uploads_mb + s.storage.backups_mb).toFixed(2)} MB</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } catch (e) {
+        document.getElementById('statsContent').innerHTML =
+            '<div class="alert alert-danger">Failed to load system stats</div>';
+    }
+}
+</script>
+{% endblock %}

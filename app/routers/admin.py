@@ -13,7 +13,7 @@ from app.models.voter import voter_focal
 from app.services.auth import require_role
 from app.services.logging import log_activity, Actions
 from app.services.settings import get_column_settings, save_column_settings, DEFAULT_COLUMNS, is_voting_open, set_voting_open
-from app.services.backup import list_backups, create_backup, delete_backup, BACKUP_DIR
+from app.services.backup import list_backups, create_backup, delete_backup, BACKUP_DIR, get_db_path
 from app.config import settings
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -338,3 +338,114 @@ async def remove_backup(
                      ip_address=request.client.host if request.client else None)
         return {"message": "Backup deleted"}
     raise HTTPException(status_code=404, detail="Backup not found")
+
+
+# --- System Stats ---
+
+@router.get("/stats", response_class=HTMLResponse)
+async def stats_page(
+    request: Request,
+    user: User = Depends(require_role(UserRole.admin))
+):
+    """Render system stats page."""
+    return templates.TemplateResponse(
+        "admin/stats.html",
+        {"request": request, "user": user}
+    )
+
+
+@router.get("/stats/data")
+async def get_system_stats(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(UserRole.admin))
+):
+    """Get system statistics."""
+    import platform
+    import shutil
+
+    # Database stats
+    db_path = get_db_path()
+    db_size = os.path.getsize(db_path) if os.path.exists(db_path) else 0
+    wal_path = db_path + "-wal"
+    wal_size = os.path.getsize(wal_path) if os.path.exists(wal_path) else 0
+
+    # Record counts
+    voter_count = db.query(Voter).count()
+    box_count = db.query(Box).count()
+    focal_count = db.query(Focal).count()
+    candidate_count = db.query(Candidate).count()
+    user_count = db.query(User).count()
+    log_count = db.query(ActivityLog).count()
+
+    # Uploads size
+    uploads_size = 0
+    uploads_count = 0
+    if os.path.exists("uploads"):
+        for f in os.listdir("uploads"):
+            fp = os.path.join("uploads", f)
+            if os.path.isfile(fp):
+                uploads_size += os.path.getsize(fp)
+                uploads_count += 1
+
+    # Backups size
+    backups_size = 0
+    backups_count = 0
+    if os.path.exists(BACKUP_DIR):
+        for f in os.listdir(BACKUP_DIR):
+            fp = os.path.join(BACKUP_DIR, f)
+            if os.path.isfile(fp):
+                backups_size += os.path.getsize(fp)
+                backups_count += 1
+
+    # System info
+    disk = shutil.disk_usage(".")
+
+    # Try psutil for CPU/memory, fallback if not available
+    try:
+        import psutil
+        mem = psutil.virtual_memory()
+        cpu_count = psutil.cpu_count()
+        cpu_percent = psutil.cpu_percent(interval=0.5)
+        mem_total = round(mem.total / 1024 / 1024)
+        mem_used = round(mem.used / 1024 / 1024)
+        mem_percent = mem.percent
+    except ImportError:
+        cpu_count = os.cpu_count() or 1
+        cpu_percent = 0
+        mem_total = 0
+        mem_used = 0
+        mem_percent = 0
+
+    return {
+        "database": {
+            "size_mb": round(db_size / 1024 / 1024, 2),
+            "wal_size_mb": round(wal_size / 1024 / 1024, 2),
+            "total_size_mb": round((db_size + wal_size) / 1024 / 1024, 2),
+        },
+        "records": {
+            "voters": voter_count,
+            "boxes": box_count,
+            "focals": focal_count,
+            "candidates": candidate_count,
+            "users": user_count,
+            "logs": log_count,
+        },
+        "storage": {
+            "uploads_count": uploads_count,
+            "uploads_mb": round(uploads_size / 1024 / 1024, 2),
+            "backups_count": backups_count,
+            "backups_mb": round(backups_size / 1024 / 1024, 2),
+        },
+        "system": {
+            "platform": platform.platform(),
+            "python": platform.python_version(),
+            "cpu_count": cpu_count,
+            "cpu_percent": cpu_percent,
+            "memory_total_mb": mem_total,
+            "memory_used_mb": mem_used,
+            "memory_percent": mem_percent,
+            "disk_total_gb": round(disk.total / 1024 / 1024 / 1024, 1),
+            "disk_used_gb": round(disk.used / 1024 / 1024 / 1024, 1),
+            "disk_percent": round(disk.used / disk.total * 100, 1),
+        }
+    }
