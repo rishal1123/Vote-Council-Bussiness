@@ -73,6 +73,43 @@ async def search_voters_by_box(
     ]
 
 
+@router.get("/search-by-id")
+async def search_voters_by_national_id(
+    q: str = Query(..., min_length=1),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(UserRole.admin, UserRole.operator))
+):
+    """Search for voters by National ID."""
+    query = q.strip().upper()
+
+    voters = db.query(Voter).filter(
+        Voter.national_id == query
+    ).order_by(Voter.name).all()
+
+    if not voters:
+        raise HTTPException(status_code=404, detail="No voters found with this National ID")
+
+    return [
+        {
+            "id": v.id,
+            "voter_id": v.voter_id,
+            "national_id": v.national_id,
+            "name": v.name,
+            "gender": v.gender,
+            "age": v.age,
+            "photo_path": v.photo_path,
+            "is_pledged": v.is_pledged.value if v.is_pledged else "no",
+            "vote_status": v.vote_status.value,
+            "voted_for": v.voted_for,
+            "contact": v.contact,
+            "new_contact": v.new_contact,
+            "box_name": v.box.name if v.box else None,
+            "box_number": v.box_number
+        }
+        for v in voters
+    ]
+
+
 @router.post("/mark/{voter_id}")
 async def mark_vote(
     voter_id: int,

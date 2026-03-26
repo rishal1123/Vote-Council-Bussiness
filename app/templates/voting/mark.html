@@ -70,19 +70,44 @@
     </div>
     {% endif %}
 
-    <!-- Search Section -->
+    <!-- Search Mode Toggle -->
     <div class="search-section mb-4">
-        <div class="input-group input-group-lg">
-            <span class="input-group-text"><i class="bi bi-box"></i></span>
-            <input type="text" class="form-control" id="boxPrefix" style="max-width: 120px;"
-                   placeholder="B2." value="B">
-            <input type="text" class="form-control" id="searchInput"
-                   placeholder="Number..." autofocus>
-            <button class="btn btn-primary" type="button" onclick="searchVoters()">
-                <i class="bi bi-search"></i> Search
+        <div class="btn-group w-100 mb-3" role="group">
+            <button type="button" class="btn btn-outline-primary active" id="modeBox" onclick="setSearchMode('box')">
+                <i class="bi bi-box"></i> Search by Box#
+            </button>
+            <button type="button" class="btn btn-outline-primary" id="modeId" onclick="setSearchMode('id')">
+                <i class="bi bi-person-badge"></i> Search by National ID
             </button>
         </div>
-        <div class="form-text text-center">Set box prefix once (e.g. B2.), then enter number and press Enter</div>
+
+        <!-- Box# Search -->
+        <div id="boxSearchGroup">
+            <div class="input-group input-group-lg">
+                <span class="input-group-text"><i class="bi bi-box"></i></span>
+                <input type="text" class="form-control" id="boxPrefix" style="max-width: 120px;"
+                       placeholder="B2." value="B">
+                <input type="text" class="form-control" id="searchInput"
+                       placeholder="Number..." autofocus>
+                <button class="btn btn-primary" type="button" onclick="searchVoters()">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+            <div class="form-text text-center">Set box prefix once (e.g. B2.), then enter number and press Enter</div>
+        </div>
+
+        <!-- National ID Search -->
+        <div id="idSearchGroup" class="d-none">
+            <div class="input-group input-group-lg">
+                <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                <input type="text" class="form-control" id="idSearchInput"
+                       placeholder="Enter National ID (e.g. A058917)...">
+                <button class="btn btn-primary" type="button" onclick="searchByNationalId()">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+            <div class="form-text text-center">Enter full or partial National ID card number</div>
+        </div>
     </div>
 
     <!-- Voter List (shown after box search) -->
@@ -128,6 +153,13 @@
                         <p id="voterContact" class="mb-0 text-muted small"></p>
                     </div>
                 </div>
+            </div>
+
+            <!-- Quick Action: Vote as Pledged (only for pledged voters) -->
+            <div id="quickPledgedSection" class="card-body border-top d-none {% if not voting_open %}d-none{% endif %}">
+                <button class="btn btn-success btn-lg w-100 py-3" onclick="quickVoteAsPledged()">
+                    <i class="bi bi-star-fill"></i> Vote as Pledged (Our Candidate)
+                </button>
             </div>
 
             <!-- Step 1: Has this person voted? -->
@@ -190,6 +222,7 @@ let selectedStatus = null;
 let selectedCandidate = null;
 let candidates = [];
 let recentMarks = [];
+let searchMode = 'box';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Load candidates
@@ -201,6 +234,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (savedPrefix) {
         document.getElementById('boxPrefix').value = savedPrefix;
     }
+
+    // Restore saved search mode
+    const savedMode = localStorage.getItem('votecouncil_search_mode');
+    if (savedMode) setSearchMode(savedMode);
 
     // Save prefix on change
     document.getElementById('boxPrefix').addEventListener('input', () => {
@@ -216,10 +253,53 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('searchInput').focus();
         }
     });
+    document.getElementById('idSearchInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') searchByNationalId();
+    });
 
-    // Focus number input on page load
-    document.getElementById('searchInput').focus();
+    // Focus appropriate input
+    if (searchMode === 'id') {
+        document.getElementById('idSearchInput').focus();
+    } else {
+        document.getElementById('searchInput').focus();
+    }
 });
+
+function setSearchMode(mode) {
+    searchMode = mode;
+    localStorage.setItem('votecouncil_search_mode', mode);
+    document.getElementById('modeBox').classList.toggle('active', mode === 'box');
+    document.getElementById('modeId').classList.toggle('active', mode === 'id');
+    document.getElementById('boxSearchGroup').classList.toggle('d-none', mode !== 'box');
+    document.getElementById('idSearchGroup').classList.toggle('d-none', mode !== 'id');
+    if (mode === 'id') {
+        document.getElementById('idSearchInput').focus();
+    } else {
+        document.getElementById('searchInput').focus();
+    }
+}
+
+async function searchByNationalId() {
+    const query = document.getElementById('idSearchInput').value.trim();
+    if (!query) return;
+
+    try {
+        const response = await fetch(`/voting/search-by-id?q=${encodeURIComponent(query)}`);
+        if (response.ok) {
+            const voters = await response.json();
+            currentVoterList = voters;
+            if (voters.length === 1) {
+                displayVoter(voters[0]);
+            } else {
+                displayVoterList(voters, `ID: ${query}`);
+            }
+        } else {
+            showNoResults();
+        }
+    } catch (error) {
+        showToast('Error searching for voters', 'danger');
+    }
+}
 
 async function searchVoters() {
     const prefix = document.getElementById('boxPrefix').value.trim();
@@ -345,11 +425,58 @@ function displayVoter(voter) {
     document.getElementById('candidateSection').classList.add('d-none');
     document.getElementById('confirmBtn').disabled = true;
 
+    // Show quick "Vote as Pledged" button for pledged voters
+    const quickSection = document.getElementById('quickPledgedSection');
+    if (voter.is_pledged === 'yes' && voter.vote_status === 'not_voted') {
+        quickSection.classList.remove('d-none');
+    } else {
+        quickSection.classList.add('d-none');
+    }
+
     // Populate candidates
     renderCandidates();
 }
 
 let pledgedCandidate = null;
+
+async function quickVoteAsPledged() {
+    if (!currentVoter) return;
+    const pc = candidates.find(c => c.is_pledged);
+    if (!pc) {
+        showToast('No pledged candidate configured', 'warning');
+        return;
+    }
+
+    const data = { vote_status: 'voted_pledged', voted_for: pc.id };
+    try {
+        const response = await fetch(`/voting/mark/${currentVoter.id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (response.ok) {
+            showToast(`${currentVoter.name} marked as Voted Pledged`, 'success');
+            addToRecentMarks(currentVoter, 'voted_pledged');
+            if (currentVoterList.length > 0) {
+                const idx = currentVoterList.findIndex(v => v.id === currentVoter.id);
+                if (idx >= 0) currentVoterList[idx].vote_status = 'voted_pledged';
+                const prefix = document.getElementById('boxPrefix').value.trim();
+                const number = document.getElementById('searchInput').value.trim();
+                displayVoterList(currentVoterList, prefix + number);
+                document.getElementById('voterSection').classList.add('d-none');
+            } else {
+                document.getElementById('voterSection').classList.add('d-none');
+                document.getElementById(searchMode === 'id' ? 'idSearchInput' : 'searchInput').value = '';
+                document.getElementById(searchMode === 'id' ? 'idSearchInput' : 'searchInput').focus();
+            }
+        } else {
+            showToast('Failed to mark vote', 'danger');
+        }
+    } catch (error) {
+        showToast('Saved offline - will sync when online', 'warning');
+        addToRecentMarks(currentVoter, 'voted_pledged');
+    }
+}
 
 function renderCandidates() {
     const list = document.getElementById('candidateList');
