@@ -20,6 +20,18 @@
         </div>
     </div>
 
+    {% if user.role.value == 'admin' %}
+    <div id="votingToggle" class="alert d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <i class="bi bi-broadcast me-2"></i>
+            <strong>Voting Status:</strong> <span id="votingStatusText">Loading...</span>
+        </div>
+        <button id="votingToggleBtn" class="btn btn-sm" onclick="toggleVoting()">
+            Loading...
+        </button>
+    </div>
+    {% endif %}
+
     {% if focal_view %}
     <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
         <i class="bi bi-info-circle-fill me-2"></i>
@@ -271,8 +283,62 @@ function updateTimestamp() {
     document.getElementById('lastUpdated').textContent = 'Last updated: ' + time;
 }
 
+// Voting toggle
+async function loadVotingStatus() {
+    try {
+        const res = await fetch('/admin/voting-status');
+        if (res.ok) {
+            const data = await res.json();
+            updateVotingUI(data.voting_open);
+        }
+    } catch (e) {}
+}
+
+function updateVotingUI(isOpen) {
+    const toggle = document.getElementById('votingToggle');
+    const text = document.getElementById('votingStatusText');
+    const btn = document.getElementById('votingToggleBtn');
+    if (!toggle) return;
+
+    if (isOpen) {
+        toggle.className = 'alert alert-success d-flex align-items-center justify-content-between mb-4';
+        text.textContent = 'OPEN - Operators can mark votes';
+        btn.className = 'btn btn-sm btn-danger';
+        btn.innerHTML = '<i class="bi bi-lock"></i> Close Voting';
+    } else {
+        toggle.className = 'alert alert-danger d-flex align-items-center justify-content-between mb-4';
+        text.textContent = 'CLOSED - Vote marking is disabled';
+        btn.className = 'btn btn-sm btn-success';
+        btn.innerHTML = '<i class="bi bi-unlock"></i> Open Voting';
+    }
+    toggle.dataset.open = isOpen;
+}
+
+async function toggleVoting() {
+    const toggle = document.getElementById('votingToggle');
+    const currentOpen = toggle.dataset.open === 'true';
+    const action = currentOpen ? 'close' : 'open';
+    if (!confirm(`Are you sure you want to ${action} voting?`)) return;
+
+    try {
+        const res = await fetch('/admin/voting-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ voting_open: !currentOpen })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            updateVotingUI(data.voting_open);
+            showToast(data.message, 'success');
+        }
+    } catch (e) {
+        showToast('Failed to toggle voting', 'danger');
+    }
+}
+
 // Show current time on page load
 document.addEventListener('DOMContentLoaded', function() {
+    loadVotingStatus();
     updateTimestamp();
 });
 

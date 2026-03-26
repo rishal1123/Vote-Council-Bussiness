@@ -12,7 +12,7 @@ from app.models.user import UserRole
 from app.models.voter import voter_focal
 from app.services.auth import require_role
 from app.services.logging import log_activity, Actions
-from app.services.settings import get_column_settings, save_column_settings, DEFAULT_COLUMNS
+from app.services.settings import get_column_settings, save_column_settings, DEFAULT_COLUMNS, is_voting_open, set_voting_open
 from app.config import settings
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -238,3 +238,32 @@ async def clear_logs(
     db.commit()
 
     return {"message": f"Deleted {count} old log entries"}
+
+
+@router.get("/voting-status")
+async def get_voting_status(
+    user: User = Depends(require_role(UserRole.admin))
+):
+    """Get current voting open/closed status."""
+    return {"voting_open": is_voting_open()}
+
+
+@router.post("/voting-status")
+async def toggle_voting_status(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(UserRole.admin))
+):
+    """Toggle voting open/closed."""
+    data = await request.json()
+    new_status = data.get("voting_open", False)
+    set_voting_open(new_status)
+
+    status_text = "opened" if new_status else "closed"
+    log_activity(
+        db, "voting_toggle", user,
+        details=f"Voting {status_text}",
+        ip_address=request.client.host if request.client else None
+    )
+
+    return {"voting_open": new_status, "message": f"Voting {status_text}"}

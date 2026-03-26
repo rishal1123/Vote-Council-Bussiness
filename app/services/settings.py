@@ -47,3 +47,25 @@ def get_visible_columns(view_type):
     """Get list of column keys visible for a view type (print/pdf/detail)"""
     settings = get_column_settings()
     return {key: val for key, val in settings.items() if val.get(view_type, False)}
+
+
+# --- Voting open/closed ---
+
+def is_voting_open():
+    """Check if voting is currently open."""
+    if os.path.exists(SETTINGS_FILE):
+        with open(SETTINGS_FILE, 'r') as f:
+            data = json.load(f)
+            return data.get("_voting_open", False)
+    return False
+
+
+def set_voting_open(is_open):
+    """Set voting open or closed."""
+    data = {}
+    if os.path.exists(SETTINGS_FILE):
+        with open(SETTINGS_FILE, 'r') as f:
+            data = json.load(f)
+    data["_voting_open"] = is_open
+    with open(SETTINGS_FILE, 'w') as f:
+        json.dump(data, f, indent=2)

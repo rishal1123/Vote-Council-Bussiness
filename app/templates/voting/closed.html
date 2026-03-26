@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Voting Closed - VoteCouncil{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center">
+        <div class="mb-4">
+            <i class="bi bi-lock-fill" style="font-size: 5rem; color: #D21034;"></i>
+        </div>
+        <h1 class="h2 mb-3">Voting is Currently Closed</h1>
+        <p class="text-muted mb-4">The admin has not yet opened voting. Please wait until voting is enabled.</p>
+        <a href="/dashboard" class="btn btn-primary">
+            <i class="bi bi-speedometer2"></i> Go to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
