@@ -1,5 +1,6 @@
 import os
 import shutil
+import sqlite3
 import asyncio
 from datetime import datetime
 from app.config import settings
@@ -39,7 +40,7 @@ def get_db_path():
 
 
 def create_backup(reason="manual"):
-    """Create a timestamped copy of the database."""
+    """Create a timestamped copy of the database using SQLite backup API."""
     ensure_backup_dir()
     db_path = get_db_path()
 
@@ -50,12 +51,19 @@ def create_backup(reason="manual"):
     backup_name = f"votecouncil_{timestamp}_{reason}.db"
     backup_path = os.path.join(BACKUP_DIR, backup_name)
 
-    shutil.copy2(db_path, backup_path)
-
-    # Also copy WAL file if exists (for consistency)
-    wal_path = db_path + "-wal"
-    if os.path.exists(wal_path):
-        shutil.copy2(wal_path, backup_path + "-wal")
+    # Use SQLite backup API for a consistent copy (includes WAL data)
+    try:
+        src = sqlite3.connect(db_path)
+        dst = sqlite3.connect(backup_path)
+        src.backup(dst)
+        dst.close()
+        src.close()
+    except Exception:
+        # Fallback to file copy
+        shutil.copy2(db_path, backup_path)
+        wal_path = db_path + "-wal"
+        if os.path.exists(wal_path):
+            shutil.copy2(wal_path, backup_path + "-wal")
 
     # Cleanup old backups
     cleanup_old_backups()
