@@ -18,7 +18,7 @@ templates = Jinja2Templates(directory="app/templates")
 @router.get("/list", response_class=HTMLResponse)
 async def boxes_list_page(
     request: Request,
-    user: User = Depends(require_role(UserRole.admin, UserRole.operator))
+    user: User = Depends(require_role(UserRole.admin))
 ):
     """Render boxes management page."""
     return templates.TemplateResponse(

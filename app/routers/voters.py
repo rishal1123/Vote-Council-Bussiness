@@ -150,7 +150,7 @@ async def voters_export_pdf(
 @router.get("/new", response_class=HTMLResponse)
 async def voters_new_page(
     request: Request,
-    user: User = Depends(require_role(UserRole.admin, UserRole.operator))
+    user: User = Depends(require_role(UserRole.admin))
 ):
     """Render new voter form."""
     return templates.TemplateResponse(

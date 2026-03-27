@@ -200,8 +200,8 @@ async function resetPassword() {
     if (password.length < 6) { showToast('Password must be at least 6 characters', 'danger'); return; }
 
     try {
-        const response = await fetch(`/auth/users/${resetUserId}/password`, {
-            method: 'PUT',
+        const response = await fetch(`/auth/users/${resetUserId}/reset-password`, {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ password })
         });

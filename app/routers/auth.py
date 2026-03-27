@@ -140,7 +140,7 @@ async def delete_user(
     return {"message": "User deleted"}
 
 
-@router.put("/users/{user_id}/password")
+@router.post("/users/{user_id}/reset-password")
 async def admin_reset_password(
     user_id: int,
     request: Request,
@@ -161,7 +161,7 @@ async def admin_reset_password(
     db.commit()
 
     log_activity(
-        db, Actions.USER_UPDATED,
+        db, Actions.VOTER_UPDATE,
         user=current_user,
         details=f"Admin reset password for user: {user.username}",
         ip_address=request.client.host if request.client else None

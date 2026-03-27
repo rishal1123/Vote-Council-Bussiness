@@ -18,7 +18,7 @@ templates = Jinja2Templates(directory="app/templates")
 @router.get("/list", response_class=HTMLResponse)
 async def candidates_list_page(
     request: Request,
-    user: User = Depends(get_current_user_required)
+    user: User = Depends(require_role(UserRole.admin))
 ):
     """Render candidates management page."""
     return templates.TemplateResponse(
