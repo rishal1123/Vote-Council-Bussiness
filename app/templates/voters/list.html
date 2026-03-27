@@ -186,7 +186,7 @@ async function loadFilters() {
     boxes = await boxRes.json();
     const boxSelect = document.getElementById('boxFilter');
     boxes.forEach(box => {
-        boxSelect.innerHTML += `<option value="${box.id}">${box.name} (${box.voter_count})</option>`;
+        boxSelect.innerHTML += `<option value="${box.id}">${escapeHtml(box.name)} (${box.voter_count})</option>`;
     });
 
     // Load focals
@@ -194,7 +194,7 @@ async function loadFilters() {
     focals = await focalRes.json();
     const focalSelect = document.getElementById('focalFilter');
     focals.forEach(focal => {
-        focalSelect.innerHTML += `<option value="${focal.id}">${focal.name} (${focal.voter_count})</option>`;
+        focalSelect.innerHTML += `<option value="${focal.id}">${escapeHtml(focal.name)} (${focal.voter_count})</option>`;
     });
 }
 
@@ -272,7 +272,7 @@ function renderVoters(voters) {
             <td>
                 <div class="d-flex align-items-center gap-2">
                     ${voter.photo_path
-                        ? `<img src="/uploads/${voter.photo_path}" class="rounded-circle" style="width:32px;height:32px;object-fit:cover;" alt="">`
+                        ? `<img src="/uploads/${encodeURIComponent(voter.photo_path)}" class="voter-avatar" alt="">`
                         : `<span class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center" style="width:32px;height:32px;"><i class="bi bi-person text-muted"></i></span>`
                     }
                     <div>

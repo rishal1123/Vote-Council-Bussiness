@@ -182,9 +182,9 @@ document.getElementById('importForm').addEventListener('submit', async (e) => {
                                         ${result.duplicates.map(d => `
                                             <tr>
                                                 <td>${d.row}</td>
-                                                <td><strong>${d.national_id}</strong></td>
-                                                <td>${d.name}</td>
-                                                <td><small>${d.reason}</small></td>
+                                                <td><strong>${escapeHtml(d.national_id)}</strong></td>
+                                                <td>${escapeHtml(d.name)}</td>
+                                                <td><small>${escapeHtml(d.reason)}</small></td>
                                             </tr>
                                         `).join('')}
                                     </tbody>
@@ -208,7 +208,7 @@ document.getElementById('importForm').addEventListener('submit', async (e) => {
                                         ${result.warnings.map(w => `
                                             <tr>
                                                 <td>${w.row}</td>
-                                                <td><small>${w.description}</small></td>
+                                                <td><small>${escapeHtml(w.description)}</small></td>
                                             </tr>
                                         `).join('')}
                                     </tbody>

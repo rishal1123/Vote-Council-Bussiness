@@ -340,7 +340,7 @@ function displayVoterList(voters, boxQuery) {
         const color = statusColors[v.vote_status] || 'secondary';
         const label = v.vote_status.replace(/_/g, ' ');
         const photo = v.photo_path
-            ? `<img src="/uploads/${v.photo_path}" class="voter-list-avatar" alt="">`
+            ? `<img src="/uploads/${encodeURIComponent(v.photo_path)}" class="voter-list-avatar" alt="">`
             : `<div class="voter-list-avatar-placeholder"><i class="bi bi-person text-muted"></i></div>`;
         const pledgeIcon = v.is_pledged === 'yes' ? '<i class="bi bi-star-fill text-success ms-1" title="Pledged"></i>' : '';
         return `
@@ -379,7 +379,7 @@ function displayVoter(voter) {
     // Photo
     const photoDiv = document.getElementById('voterPhoto');
     if (voter.photo_path) {
-        photoDiv.innerHTML = `<img src="/uploads/${voter.photo_path}" class="voter-header-photo" alt="">`;
+        photoDiv.innerHTML = `<img src="/uploads/${encodeURIComponent(voter.photo_path)}" class="voter-header-photo" alt="">`;
     } else {
         photoDiv.innerHTML = `<div class="voter-header-placeholder"><i class="bi bi-person-fill"></i></div>`;
     }
