@@ -1,10 +1,12 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse, FileResponse
+from fastapi.responses import RedirectResponse, FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 import asyncio
+import time
+from collections import defaultdict
 
 from app.config import settings
 from app.database import init_db, SessionLocal
@@ -13,11 +15,14 @@ from app.services.logging import log_activity, Actions
 from app.services.backup import create_backup, backup_scheduler
 from app.routers import auth, voters, focals, candidates, boxes, import_data, dashboard, pages, admin, reports, voting
 
-# Create FastAPI app
+# Create FastAPI app — disable docs in production
 app = FastAPI(
     title=settings.APP_NAME,
     description="Voter Management PWA for Election Day",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
 
 # Security headers middleware
@@ -39,12 +44,39 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(SecurityHeadersMiddleware)
 
-# CORS middleware — allow_origins=["*"] is open for development; restrict in production
+# Rate limiting for login attempts
+login_attempts = defaultdict(list)  # IP -> list of timestamps
+RATE_LIMIT_WINDOW = 300  # 5 minutes
+RATE_LIMIT_MAX = 10  # max attempts per window
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.url.path == "/auth/login" and request.method == "POST":
+            ip = request.client.host if request.client else "unknown"
+            now = time.time()
+            # Clean old entries
+            login_attempts[ip] = [t for t in login_attempts[ip] if now - t < RATE_LIMIT_WINDOW]
+            if len(login_attempts[ip]) >= RATE_LIMIT_MAX:
+                return JSONResponse(
+                    status_code=429,
+                    content={"detail": "Too many login attempts. Please try again in a few minutes."}
+                )
+            login_attempts[ip].append(now)
+        return await call_next(request)
+
+
+app.add_middleware(RateLimitMiddleware)
+
+# CORS — restrict to own domain
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,  # Safe: prevents cross-origin cookie sending with wildcard origins
-    allow_methods=["*"],
+    allow_origins=[
+        "https://voterslife.com",
+        "http://localhost:8000",
+    ],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
 

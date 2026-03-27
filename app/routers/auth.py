@@ -75,7 +75,7 @@ async def login(
         httponly=True,
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="Lax",
-        secure=False,  # Set to True in production when using HTTPS
+        secure=True,
     )
     return response
 
