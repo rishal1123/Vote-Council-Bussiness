@@ -120,7 +120,7 @@ function dismissInstall() {
 // Service Worker Registration with auto-update
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/static/sw.js')
+        navigator.serviceWorker.register('/static/sw.js', { scope: '/' })
             .then(registration => {
                 console.log('ServiceWorker registered:', registration.scope);
 

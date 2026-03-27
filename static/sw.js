@@ -64,13 +64,17 @@ async function deletePendingVote(id) {
 
 // --- Service Worker events ---
 
-// Install event - cache static assets
+// Install event - cache static assets (resilient: skip failures)
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(STATIC_CACHE)
             .then(cache => {
                 console.log('Caching static assets');
-                return cache.addAll(STATIC_ASSETS);
+                return Promise.allSettled(
+                    STATIC_ASSETS.map(url =>
+                        cache.add(url).catch(err => console.warn('Cache skip:', url, err.message))
+                    )
+                );
             })
             .then(() => self.skipWaiting())
     );

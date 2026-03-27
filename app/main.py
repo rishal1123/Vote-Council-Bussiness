@@ -29,6 +29,9 @@ app = FastAPI(
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
+        # Allow service worker from /static/ to control / scope
+        if request.url.path == "/static/sw.js":
+            response.headers["Service-Worker-Allowed"] = "/"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
@@ -39,7 +42,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net; "
             "img-src 'self' data: blob:; "
             "font-src 'self' cdn.jsdelivr.net; "
-            "connect-src 'self' cdn.jsdelivr.net cloudflareinsights.com"
+            "connect-src 'self' cdn.jsdelivr.net *.jsdelivr.net cloudflareinsights.com *.cloudflareinsights.com"
         )
         return response
 
