@@ -140,6 +140,35 @@ async def delete_user(
     return {"message": "User deleted"}
 
 
+@router.put("/users/{user_id}/password")
+async def admin_reset_password(
+    user_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.admin))
+):
+    """Admin reset a user's password."""
+    data = await request.json()
+    new_password = data.get("password", "")
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.password_hash = get_password_hash(new_password)
+    db.commit()
+
+    log_activity(
+        db, Actions.USER_UPDATED,
+        user=current_user,
+        details=f"Admin reset password for user: {user.username}",
+        ip_address=request.client.host if request.client else None
+    )
+    return {"message": f"Password reset for {user.username}"}
+
+
 @router.get("/change-password", response_class=HTMLResponse)
 async def change_password_page(
     request: Request,
