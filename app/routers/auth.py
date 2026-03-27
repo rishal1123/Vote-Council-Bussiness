@@ -75,7 +75,7 @@ async def login(
         httponly=True,
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="Lax",
-        secure=True,
+        secure=settings.COOKIE_SECURE,
     )
     return response
 

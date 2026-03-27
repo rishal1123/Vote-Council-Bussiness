@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
 
+    # Cookie security (True when behind HTTPS proxy like Cloudflare)
+    COOKIE_SECURE: bool = True
+
     # File Upload
     UPLOAD_DIR: Path = Path("uploads")
     MAX_UPLOAD_SIZE: int = 5 * 1024 * 1024  # 5MB
