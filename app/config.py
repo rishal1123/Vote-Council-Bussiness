@@ -14,8 +14,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
 
-    # Cookie security (True when behind HTTPS proxy like Cloudflare)
-    COOKIE_SECURE: bool = True
+    # Cookie security — set False when Cloudflare connects to backend via HTTP
+    COOKIE_SECURE: bool = False
 
     # File Upload
     UPLOAD_DIR: Path = Path("uploads")
