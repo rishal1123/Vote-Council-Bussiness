@@ -303,7 +303,8 @@ function renderVoters(voters) {
     `).join('');
 
     // Reset select-all checkbox
-    document.getElementById('selectAll').checked = false;
+    const selectAll = document.getElementById('selectAll');
+    if (selectAll) selectAll.checked = false;
 }
 
 function getStatusBadge(status) {
@@ -436,24 +437,28 @@ function toggleVoterSelection(voterId, isChecked) {
 function updateBulkActionBar() {
     const bar = document.getElementById('bulkActionBar');
     const countEl = document.getElementById('selectedCount');
+    if (!bar || !countEl) return;
     countEl.textContent = selectedVoterIds.size;
     bar.style.display = selectedVoterIds.size > 0 ? 'block' : 'none';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('selectAll').addEventListener('change', function() {
-        const checkboxes = document.querySelectorAll('.voter-checkbox');
-        checkboxes.forEach(cb => {
-            cb.checked = this.checked;
-            const voterId = parseInt(cb.value);
-            if (this.checked) {
-                selectedVoterIds.add(voterId);
-            } else {
-                selectedVoterIds.delete(voterId);
-            }
+    const selectAll = document.getElementById('selectAll');
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.voter-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = this.checked;
+                const voterId = parseInt(cb.value);
+                if (this.checked) {
+                    selectedVoterIds.add(voterId);
+                } else {
+                    selectedVoterIds.delete(voterId);
+                }
+            });
+            updateBulkActionBar();
         });
-        updateBulkActionBar();
-    });
+    }
 });
 
 async function bulkUpdatePledge(pledgeStatus) {

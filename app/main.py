@@ -35,10 +35,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net; "
+            "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net static.cloudflareinsights.com; "
             "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net; "
             "img-src 'self' data: blob:; "
-            "font-src 'self' cdn.jsdelivr.net"
+            "font-src 'self' cdn.jsdelivr.net; "
+            "connect-src 'self' cdn.jsdelivr.net cloudflareinsights.com"
         )
         return response
 
