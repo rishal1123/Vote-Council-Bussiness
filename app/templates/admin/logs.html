@@ -173,7 +173,9 @@ function getActionBadge(action) {
 }
 
 function formatDateTime(dateStr) {
-    const date = new Date(dateStr);
+    // Server stores timestamps in UTC without Z suffix — append it
+    const utcStr = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z';
+    const date = new Date(utcStr);
     const tz = document.getElementById('tzFilter').value;
     if (tz === 'local') {
         return date.toLocaleString();
