@@ -14,18 +14,29 @@ def log_activity(
     ip_address: Optional[str] = None
 ):
     """Log an activity to the database."""
-    log = ActivityLog(
-        user_id=user.id if user else None,
-        username=user.username if user else None,
-        action=action,
-        entity_type=entity_type,
-        entity_id=entity_id,
-        details=details,
-        ip_address=ip_address
-    )
-    db.add(log)
-    db.commit()
-    return log
+    # Extract user info before any session operations (user may be detached)
+    user_id = user.id if user else None
+    username = user.username if user else None
+
+    from app.database import SessionLocal
+    log_db = SessionLocal()
+    try:
+        log = ActivityLog(
+            user_id=user_id,
+            username=username,
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            details=details,
+            ip_address=ip_address
+        )
+        log_db.add(log)
+        log_db.commit()
+        return log
+    except Exception:
+        log_db.rollback()
+    finally:
+        log_db.close()
 
 
 # Common action types
