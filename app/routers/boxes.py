@@ -9,6 +9,7 @@ from app.models import Box, Voter, User
 from app.models.user import UserRole
 from app.schemas.box import BoxCreate, BoxUpdate, BoxResponse
 from app.services.auth import get_current_user_required, require_role
+from app.services.logging import log_activity, Actions
 
 router = APIRouter(prefix="/boxes", tags=["Boxes"])
 templates = Jinja2Templates(directory="app/templates")
@@ -70,6 +71,7 @@ async def get_box(
 @router.post("", response_model=BoxResponse)
 async def create_box(
     box_data: BoxCreate,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(UserRole.admin, UserRole.operator))
 ):
@@ -84,6 +86,8 @@ async def create_box(
     db.commit()
     db.refresh(box)
 
+    log_activity(db, Actions.BOX_CREATE, user=user, details=f"Created box: {box.name}", entity_type="Box", entity_id=box.id, ip_address=request.client.host if request.client else None)
+
     return BoxResponse(id=box.id, name=box.name, location=box.location, voter_count=0)
 
 
@@ -91,6 +95,7 @@ async def create_box(
 async def update_box(
     box_id: int,
     box_data: BoxUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(UserRole.admin, UserRole.operator))
 ):
@@ -112,6 +117,8 @@ async def update_box(
     db.commit()
     db.refresh(box)
 
+    log_activity(db, Actions.BOX_UPDATE, user=user, details=f"Updated box: {box.name}", entity_type="Box", entity_id=box.id, ip_address=request.client.host if request.client else None)
+
     voter_count = db.query(Voter).filter(Voter.box_id == box.id).count()
     return BoxResponse(id=box.id, name=box.name, location=box.location, voter_count=voter_count)
 
@@ -119,6 +126,7 @@ async def update_box(
 @router.delete("/{box_id}")
 async def delete_box(
     box_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(UserRole.admin))
 ):
@@ -135,6 +143,11 @@ async def delete_box(
             detail=f"Cannot delete box with {voter_count} voters. Reassign voters first."
         )
 
+    box_name = box.name
+    box_id_val = box.id
     db.delete(box)
     db.commit()
+
+    log_activity(db, Actions.BOX_DELETE, user=user, details=f"Deleted box: {box_name}", entity_type="Box", entity_id=box_id_val, ip_address=request.client.host if request.client else None)
+
     return {"message": "Box deleted"}

@@ -9,6 +9,7 @@ from app.models import Focal, Voter, User
 from app.models.user import UserRole
 from app.schemas.focal import FocalCreate, FocalUpdate, FocalResponse
 from app.services.auth import get_current_user_required, require_role
+from app.services.logging import log_activity, Actions
 
 router = APIRouter(prefix="/focals", tags=["Focals"])
 templates = Jinja2Templates(directory="app/templates")
@@ -71,6 +72,7 @@ async def get_focal(
 @router.post("", response_model=FocalResponse)
 async def create_focal(
     focal_data: FocalCreate,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(UserRole.admin, UserRole.operator))
 ):
@@ -79,6 +81,8 @@ async def create_focal(
     db.add(focal)
     db.commit()
     db.refresh(focal)
+
+    log_activity(db, Actions.FOCAL_CREATE, user=user, details=f"Created focal: {focal.name}", entity_type="Focal", entity_id=focal.id, ip_address=request.client.host if request.client else None)
 
     return FocalResponse(
         id=focal.id,
@@ -93,6 +97,7 @@ async def create_focal(
 async def update_focal(
     focal_id: int,
     focal_data: FocalUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(UserRole.admin, UserRole.operator))
 ):
@@ -108,6 +113,8 @@ async def update_focal(
     db.commit()
     db.refresh(focal)
 
+    log_activity(db, Actions.FOCAL_UPDATE, user=user, details=f"Updated focal: {focal.name}", entity_type="Focal", entity_id=focal.id, ip_address=request.client.host if request.client else None)
+
     return FocalResponse(
         id=focal.id,
         name=focal.name,
@@ -120,6 +127,7 @@ async def update_focal(
 @router.delete("/{focal_id}")
 async def delete_focal(
     focal_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(UserRole.admin))
 ):
@@ -128,12 +136,18 @@ async def delete_focal(
     if not focal:
         raise HTTPException(status_code=404, detail="Focal not found")
 
+    focal_name = focal.name
+    focal_id_val = focal.id
+
     # Remove focal from all voters first
     focal.voters = []
     db.commit()
 
     db.delete(focal)
     db.commit()
+
+    log_activity(db, Actions.FOCAL_DELETE, user=user, details=f"Deleted focal: {focal_name}", entity_type="Focal", entity_id=focal_id_val, ip_address=request.client.host if request.client else None)
+
     return {"message": "Focal deleted"}
 
 

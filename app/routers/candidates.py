@@ -9,6 +9,7 @@ from app.models import Candidate, User
 from app.models.user import UserRole
 from app.schemas.candidate import CandidateCreate, CandidateUpdate, CandidateResponse
 from app.services.auth import get_current_user_required, require_role
+from app.services.logging import log_activity, Actions
 
 router = APIRouter(prefix="/candidates", tags=["Candidates"])
 templates = Jinja2Templates(directory="app/templates")
@@ -65,6 +66,7 @@ async def get_candidate(
 @router.post("", response_model=CandidateResponse)
 async def create_candidate(
     candidate_data: CandidateCreate,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(UserRole.admin))
 ):
@@ -77,6 +79,9 @@ async def create_candidate(
     db.add(candidate)
     db.commit()
     db.refresh(candidate)
+
+    log_activity(db, Actions.CANDIDATE_CREATE, user=user, details=f"Created candidate: {candidate.name}", entity_type="Candidate", entity_id=candidate.id, ip_address=request.client.host if request.client else None)
+
     return candidate
 
 
@@ -84,6 +89,7 @@ async def create_candidate(
 async def update_candidate(
     candidate_id: int,
     candidate_data: CandidateUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(UserRole.admin))
 ):
@@ -106,12 +112,16 @@ async def update_candidate(
 
     db.commit()
     db.refresh(candidate)
+
+    log_activity(db, Actions.CANDIDATE_UPDATE, user=user, details=f"Updated candidate: {candidate.name}", entity_type="Candidate", entity_id=candidate.id, ip_address=request.client.host if request.client else None)
+
     return candidate
 
 
 @router.delete("/{candidate_id}")
 async def delete_candidate(
     candidate_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(UserRole.admin))
 ):
@@ -120,6 +130,11 @@ async def delete_candidate(
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
+    candidate_name = candidate.name
+    candidate_id_val = candidate.id
     db.delete(candidate)
     db.commit()
+
+    log_activity(db, Actions.CANDIDATE_DELETE, user=user, details=f"Deleted candidate: {candidate_name}", entity_type="Candidate", entity_id=candidate_id_val, ip_address=request.client.host if request.client else None)
+
     return {"message": "Candidate deleted"}

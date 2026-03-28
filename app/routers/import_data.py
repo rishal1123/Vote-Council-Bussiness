@@ -14,6 +14,7 @@ from app.models import User, Voter
 from app.models.user import UserRole
 from app.services.auth import get_current_user_required, require_role
 from app.services.excel_import import import_voters_from_excel
+from app.services.logging import log_activity, Actions
 
 router = APIRouter(prefix="/import", tags=["Import"])
 templates = Jinja2Templates(directory="app/templates")
@@ -114,6 +115,7 @@ async def export_current_data(
 
 @router.post("/excel")
 async def import_excel(
+    request: Request,
     file: UploadFile = File(...),
     import_photos: bool = True,
     db: Session = Depends(get_db),
@@ -136,5 +138,7 @@ async def import_excel(
 
     # Import voters
     stats = import_voters_from_excel(db, content, import_photos=import_photos)
+
+    log_activity(db, Actions.IMPORT_COMPLETE, user=user, details=f"Excel import from '{file.filename}': {stats.get('created', 0)} created, {stats.get('updated', 0)} updated", entity_type="Import", ip_address=request.client.host if request.client else None)
 
     return stats

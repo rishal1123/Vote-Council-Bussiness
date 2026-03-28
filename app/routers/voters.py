@@ -17,6 +17,7 @@ from app.schemas.voter import (
     BulkStatusUpdate
 )
 from app.services.auth import get_current_user_required, require_role
+from app.services.logging import log_activity, Actions
 from app.services.photo import save_photo, delete_photo
 from app.services.settings import get_visible_columns
 
@@ -419,6 +420,7 @@ async def get_voter(
 @router.post("", response_model=VoterResponse)
 async def create_voter(
     voter_data: VoterCreate,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(UserRole.admin, UserRole.operator))
 ):
@@ -442,6 +444,8 @@ async def create_voter(
     db.commit()
     db.refresh(voter)
 
+    log_activity(db, Actions.VOTER_CREATE, user=user, details=f"Created voter: {voter.name}", entity_type="Voter", entity_id=voter.id, ip_address=request.client.host if request.client else None)
+
     return await get_voter(voter.id, db, user)
 
 
@@ -449,6 +453,7 @@ async def create_voter(
 async def update_voter(
     voter_id: int,
     voter_data: VoterUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(UserRole.admin, UserRole.operator))
 ):
@@ -468,6 +473,8 @@ async def update_voter(
 
     db.commit()
     db.refresh(voter)
+
+    log_activity(db, Actions.VOTER_UPDATE, user=user, details=f"Updated voter: {voter.name}", entity_type="Voter", entity_id=voter.id, ip_address=request.client.host if request.client else None)
 
     return await get_voter(voter.id, db, user)
 
@@ -589,6 +596,7 @@ class BulkPledgeUpdate(PydanticBaseModel):
 async def update_pledge_status(
     voter_id: int,
     data: PledgeUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(UserRole.admin))
 ):
@@ -597,18 +605,23 @@ async def update_pledge_status(
     if not voter:
         raise HTTPException(status_code=404, detail="Voter not found")
 
+    old_pledge = voter.is_pledged.value if voter.is_pledged else "none"
     try:
         voter.is_pledged = PledgeStatus(data.is_pledged)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid pledge status")
 
     db.commit()
+
+    log_activity(db, "pledge_update", user=user, details=f"Updated pledge for {voter.name}: {old_pledge} -> {data.is_pledged}", entity_type="Voter", entity_id=voter.id, ip_address=request.client.host if request.client else None)
+
     return {"message": "Pledge status updated", "is_pledged": voter.is_pledged.value}
 
 
 @router.post("/bulk-pledge")
 async def bulk_update_pledge(
     data: BulkPledgeUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(UserRole.admin))
 ):
@@ -623,12 +636,16 @@ async def bulk_update_pledge(
         voter.is_pledged = pledge_status
 
     db.commit()
+
+    log_activity(db, "bulk_pledge_update", user=user, details=f"Bulk pledge update to '{data.is_pledged}' for {len(voters)} voters", entity_type="Voter", ip_address=request.client.host if request.client else None)
+
     return {"message": f"Updated pledge status for {len(voters)} voters"}
 
 
 @router.delete("/{voter_id}")
 async def delete_voter(
     voter_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(require_role(UserRole.admin))
 ):
@@ -637,10 +654,16 @@ async def delete_voter(
     if not voter:
         raise HTTPException(status_code=404, detail="Voter not found")
 
+    voter_name = voter.name
+    voter_id_val = voter.id
+
     # Delete photo if exists
     if voter.photo_path:
         delete_photo(voter.photo_path)
 
     db.delete(voter)
     db.commit()
+
+    log_activity(db, Actions.VOTER_DELETE, user=user, details=f"Deleted voter: {voter_name}", entity_type="Voter", entity_id=voter_id_val, ip_address=request.client.host if request.client else None)
+
     return {"message": "Voter deleted"}
