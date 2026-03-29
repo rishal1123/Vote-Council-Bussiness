@@ -189,18 +189,68 @@ let boxes = [];
 let focals = [];
 const isAdmin = {{ 'true' if user.role.value == 'admin' else 'false' }};
 
-// Column visibility
-const defaultCols = {photo: true, ec_number: false, voter_id: false, national_id: true, gender: false, age: false, party: false, address: false, contact: true, new_contact: false, prev_island: false, prev_address: false, cur_location: false, box: true, box_number: false, zone: false, focals: true, focal_comment: false, remarks: false, pledged: true, status: true};
-let visibleCols = {...defaultCols};
+// Column visibility - syncs admin settings (order + defaults) with user localStorage overrides
+let adminColSettings = {}; // from admin settings API
+let visibleCols = {};
+let colOrder = []; // ordered column keys from admin
 
-function loadColumnPrefs() {
+// Map admin setting keys to JS column keys
+const colKeyMap = {photo:'photo', ec_number:'ec_number', voter_id:'voter_id', national_id:'national_id', name:'name', gender:'gender', age:'age', party:'party', address:'address', contact:'contact', new_contact:'new_contact', previous_island:'prev_island', previous_address:'prev_address', current_location:'cur_location', box:'box', box_number:'box_number', zone:'zone', focals:'focals', focal_comment:'focal_comment', remarks:'remarks', pledged:'pledged', vote_status:'status'};
+const jsToAdmin = Object.fromEntries(Object.entries(colKeyMap).map(([k,v]) => [v,k]));
+
+async function loadColumnPrefs() {
+    // Load admin settings for order and defaults
+    try {
+        const r = await fetch('/admin/settings/columns');
+        adminColSettings = await r.json();
+    } catch(e) {
+        adminColSettings = {};
+    }
+
+    // Build ordered column list from admin settings
+    const entries = Object.entries(adminColSettings)
+        .filter(([k,v]) => typeof v === 'object' && k !== 'name')
+        .sort((a,b) => (a[1].order ?? 999) - (b[1].order ?? 999));
+
+    colOrder = entries.map(([k]) => colKeyMap[k] || k).filter(k => k !== 'name');
+
+    // Set defaults from admin 'list' visibility
+    const defaults = {};
+    for (const [adminKey, val] of entries) {
+        const jsKey = colKeyMap[adminKey] || adminKey;
+        if (jsKey !== 'name') defaults[jsKey] = val.list ?? false;
+    }
+
+    // Override with user's localStorage prefs
     const saved = localStorage.getItem('votecouncil_voter_cols');
     if (saved) {
-        try { visibleCols = {...defaultCols, ...JSON.parse(saved)}; } catch(e) {}
+        try {
+            const userPrefs = JSON.parse(saved);
+            visibleCols = {...defaults, ...userPrefs};
+        } catch(e) { visibleCols = defaults; }
+    } else {
+        visibleCols = defaults;
     }
-    // Sync checkboxes
+
+    // Rebuild dropdown checkboxes in admin order
+    const dropdown = document.getElementById('columnDropdown');
+    let html = '<small class="text-muted px-1">Toggle columns</small><hr class="my-1">';
+    for (const jsKey of colOrder) {
+        const adminKey = jsToAdmin[jsKey] || jsKey;
+        const label = (adminColSettings[adminKey] || {}).label || jsKey;
+        const checked = visibleCols[jsKey] ? 'checked' : '';
+        html += `<div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="col_${jsKey}" data-col="${jsKey}" ${checked}><label class="form-check-label" for="col_${jsKey}">${escapeHtml(label)}</label></div>`;
+    }
+    dropdown.innerHTML = html;
+
+    // Bind toggle handlers
     document.querySelectorAll('.col-toggle').forEach(cb => {
-        cb.checked = visibleCols[cb.dataset.col] ?? false;
+        cb.addEventListener('change', () => {
+            visibleCols[cb.dataset.col] = cb.checked;
+            saveColumnPrefs();
+            buildTableHeader();
+            loadVoters();
+        });
     });
 }
 
@@ -212,16 +262,7 @@ function isColVisible(col) { return visibleCols[col] ?? false; }
 
 // Load initial data
 document.addEventListener('DOMContentLoaded', async () => {
-    loadColumnPrefs();
-    // Column toggle handlers
-    document.querySelectorAll('.col-toggle').forEach(cb => {
-        cb.addEventListener('change', () => {
-            visibleCols[cb.dataset.col] = cb.checked;
-            saveColumnPrefs();
-            buildTableHeader();
-            loadVoters();
-        });
-    });
+    await loadColumnPrefs();
     await loadFilters();
     applyUrlParams();
     buildTableHeader();
@@ -300,15 +341,19 @@ async function loadVoters() {
     }
 }
 
-const allCols = ['ec_number','voter_id','national_id','gender','age','party','address','contact','new_contact','prev_island','prev_address','cur_location','box','box_number','zone','focals','focal_comment','remarks','pledged','status'];
-const colHeaders = {ec_number:'EC#', voter_id:'#', national_id:'ID', gender:'Gender', age:'Age', party:'Party', address:'Address', contact:'Contact', new_contact:'New Contact', prev_island:'Prev Island', prev_address:'Prev Address', cur_location:'Location', box:'Box', box_number:'Box#', zone:'Zone', focals:'Focals', focal_comment:'Focal Comment', remarks:'Remarks', pledged:'Pledged', status:'Status'};
 const hideMobile = new Set(['contact','new_contact','focals','gender','age','party','address','prev_island','prev_address','cur_location','box_number','zone','focal_comment','remarks']);
+const centerCols = new Set(['ec_number','voter_id','gender','age','pledged','status']);
 
 function getColCount() {
     let count = 1; // Name
     if (isAdmin) count += 2; // Checkbox + Actions
-    for (const col of allCols) { if (isColVisible(col)) count++; }
+    for (const col of colOrder) { if (isColVisible(col)) count++; }
     return count;
+}
+
+function getColLabel(jsKey) {
+    const adminKey = jsToAdmin[jsKey] || jsKey;
+    return (adminColSettings[adminKey] || {}).label || jsKey;
 }
 
 function buildTableHeader() {
@@ -316,10 +361,13 @@ function buildTableHeader() {
     let html = '<tr>';
     if (isAdmin) html += '<th class="text-center" style="width:40px;"><input type="checkbox" class="form-check-input" id="selectAll" title="Select all"></th>';
     html += '<th>Name</th>';
-    for (const col of allCols) {
+    for (const col of colOrder) {
         if (!isColVisible(col)) continue;
-        const cls = hideMobile.has(col) ? ' class="d-none d-md-table-cell"' : (col === 'pledged' || col === 'status' || col === 'age' || col === 'gender' || col === 'ec_number' || col === 'voter_id') ? ' class="text-center"' : '';
-        html += `<th${cls}>${colHeaders[col]}</th>`;
+        const classes = [];
+        if (hideMobile.has(col)) classes.push('d-none', 'd-md-table-cell');
+        if (centerCols.has(col)) classes.push('text-center');
+        const cls = classes.length ? ` class="${classes.join(' ')}"` : '';
+        html += `<th${cls}>${escapeHtml(getColLabel(col))}</th>`;
     }
     if (isAdmin) html += '<th class="text-center">Actions</th>';
     html += '</tr>';
@@ -356,7 +404,7 @@ function renderVoters(voters) {
         if (isAdmin) row += `<td class="text-center"><input type="checkbox" class="form-check-input voter-checkbox" value="${voter.id}" onchange="toggleVoterSelection(${voter.id}, this.checked)"></td>`;
         row += `<td><div class="d-flex align-items-center gap-2">${photo}<div><a href="/voters/${voter.id}/view">${escapeHtml(voter.name)}</a></div></div></td>`;
 
-        // Dynamic columns in same order as allCols
+        // Dynamic columns in admin-defined order
         const colRenderers = {
             ec_number: () => `<td class="text-center">${voter.ec_number || '-'}</td>`,
             voter_id: () => `<td class="text-center">${escapeHtml(voter.voter_id || '-')}</td>`,
@@ -380,7 +428,7 @@ function renderVoters(voters) {
             status: () => `<td class="text-center">${getStatusBadge(voter.vote_status)}</td>`
         };
 
-        for (const col of allCols) {
+        for (const col of colOrder) {
             if (isColVisible(col) && colRenderers[col]) row += colRenderers[col]();
         }
 

@@ -2,41 +2,59 @@
 
 {% block title %}Display Settings - VoteCouncil{% endblock %}
 
+{% block extra_css %}
+<style>
+    .drag-row { cursor: grab; transition: background 0.15s; }
+    .drag-row:active { cursor: grabbing; }
+    .drag-row.dragging { opacity: 0.4; background: #e7f1ff; }
+    .drag-row.drag-over { border-top: 3px solid var(--mv-ocean); }
+    .drag-handle { color: #adb5bd; font-size: 1.1rem; }
+    .drag-row:hover .drag-handle { color: var(--mv-ocean); }
+    .col-name-cell { font-weight: 500; }
+    .col-key { font-size: 0.75rem; color: #8D99AE; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-2">
-        <h1 class="h3 mb-0">
-            <i class="bi bi-sliders"></i> Display Settings
-        </h1>
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-3 gap-2 page-header">
+        <div>
+            <h1 class="h4 mb-0"><i class="bi bi-sliders text-primary"></i> Display Settings</h1>
+            <small class="text-muted">Configure column visibility and order for all views</small>
+        </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-primary" onclick="saveSettings()">
-                <i class="bi bi-check-lg"></i> Save Settings
+            <button class="btn btn-primary btn-sm" onclick="saveSettings()">
+                <i class="bi bi-check-lg"></i> Save
             </button>
-            <button class="btn btn-outline-secondary" onclick="resetDefaults()">
-                <i class="bi bi-arrow-counterclockwise"></i> Reset Defaults
+            <button class="btn btn-outline-secondary btn-sm" onclick="resetDefaults()">
+                <i class="bi bi-arrow-counterclockwise"></i> Reset
             </button>
         </div>
     </div>
 
     <div class="card">
         <div class="card-header">
-            <h5 class="mb-0">Column Visibility</h5>
-            <small class="text-muted">Choose which columns appear on Print, PDF Export, and Voter Detail pages.</small>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>Column Visibility & Order</div>
+                <small class="text-muted"><i class="bi bi-grip-vertical"></i> Drag rows to reorder</small>
+            </div>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Column Name</th>
-                            <th class="text-center" style="width: 100px;">Print</th>
-                            <th class="text-center" style="width: 100px;">PDF</th>
-                            <th class="text-center" style="width: 100px;">Detail (Profile)</th>
+                            <th style="width: 40px;"></th>
+                            <th>Column</th>
+                            <th class="text-center" style="width: 80px;">List</th>
+                            <th class="text-center" style="width: 80px;">Print</th>
+                            <th class="text-center" style="width: 80px;">PDF</th>
+                            <th class="text-center d-none d-md-table-cell" style="width: 80px;">Detail</th>
                         </tr>
                     </thead>
                     <tbody id="settingsTable">
                         <tr>
-                            <td colspan="4" class="text-center py-5">
+                            <td colspan="6" class="text-center py-5">
                                 <div class="spinner-border text-primary" role="status"></div>
                             </td>
                         </tr>
@@ -51,6 +69,7 @@
 {% block extra_js %}
 <script>
 let columnSettings = {};
+let columnOrder = []; // ordered keys
 
 document.addEventListener('DOMContentLoaded', loadSettings);
 
@@ -58,6 +77,10 @@ async function loadSettings() {
     try {
         const response = await fetch('/admin/settings/columns');
         columnSettings = await response.json();
+        // Sort by order field
+        columnOrder = Object.keys(columnSettings).sort((a, b) =>
+            (columnSettings[a].order ?? 999) - (columnSettings[b].order ?? 999)
+        );
         renderTable();
     } catch (error) {
         showToast('Failed to load settings', 'danger');
@@ -66,44 +89,31 @@ async function loadSettings() {
 
 function renderTable() {
     const tbody = document.getElementById('settingsTable');
-    const keys = Object.keys(columnSettings);
 
-    tbody.innerHTML = keys.map(key => {
+    tbody.innerHTML = columnOrder.map((key, idx) => {
         const col = columnSettings[key];
         const isName = key === 'name';
+        const views = ['list', 'print', 'pdf', 'detail'];
         return `
-            <tr>
-                <td><strong>${col.label}</strong> <small class="text-muted">(${key})</small></td>
-                <td class="text-center">
-                    <div class="form-check d-flex justify-content-center">
-                        <input class="form-check-input" type="checkbox"
-                            data-key="${key}" data-view="print"
-                            ${col.print ? 'checked' : ''}
-                            ${isName ? 'disabled' : ''}
-                            onchange="updateSetting('${key}', 'print', this.checked)">
-                    </div>
-                </td>
-                <td class="text-center">
-                    <div class="form-check d-flex justify-content-center">
-                        <input class="form-check-input" type="checkbox"
-                            data-key="${key}" data-view="pdf"
-                            ${col.pdf ? 'checked' : ''}
-                            ${isName ? 'disabled' : ''}
-                            onchange="updateSetting('${key}', 'pdf', this.checked)">
-                    </div>
-                </td>
-                <td class="text-center">
-                    <div class="form-check d-flex justify-content-center">
-                        <input class="form-check-input" type="checkbox"
-                            data-key="${key}" data-view="detail"
-                            ${col.detail ? 'checked' : ''}
-                            ${isName ? 'disabled' : ''}
-                            onchange="updateSetting('${key}', 'detail', this.checked)">
-                    </div>
-                </td>
+            <tr class="drag-row" draggable="true" data-key="${key}" data-idx="${idx}">
+                <td class="text-center align-middle"><i class="bi bi-grip-vertical drag-handle"></i></td>
+                <td class="col-name-cell">${escapeHtml(col.label)} <span class="col-key">${key}</span></td>
+                ${views.map(v => `
+                    <td class="text-center${v === 'detail' ? ' d-none d-md-table-cell' : ''}">
+                        <div class="form-check d-flex justify-content-center">
+                            <input class="form-check-input" type="checkbox"
+                                data-key="${key}" data-view="${v}"
+                                ${col[v] ? 'checked' : ''}
+                                ${isName && v !== 'list' ? 'disabled checked' : ''}
+                                onchange="updateSetting('${key}', '${v}', this.checked)">
+                        </div>
+                    </td>
+                `).join('')}
             </tr>
         `;
     }).join('');
+
+    initDragAndDrop();
 }
 
 function updateSetting(key, view, checked) {
@@ -112,7 +122,62 @@ function updateSetting(key, view, checked) {
     }
 }
 
+// Drag and drop reordering
+let dragRow = null;
+
+function initDragAndDrop() {
+    const rows = document.querySelectorAll('.drag-row');
+    rows.forEach(row => {
+        row.addEventListener('dragstart', (e) => {
+            dragRow = row;
+            row.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+        row.addEventListener('dragend', () => {
+            row.classList.remove('dragging');
+            document.querySelectorAll('.drag-over').forEach(r => r.classList.remove('drag-over'));
+            dragRow = null;
+        });
+        row.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (row !== dragRow) {
+                row.classList.add('drag-over');
+            }
+        });
+        row.addEventListener('dragleave', () => {
+            row.classList.remove('drag-over');
+        });
+        row.addEventListener('drop', (e) => {
+            e.preventDefault();
+            row.classList.remove('drag-over');
+            if (!dragRow || row === dragRow) return;
+
+            const fromKey = dragRow.dataset.key;
+            const toKey = row.dataset.key;
+            const fromIdx = columnOrder.indexOf(fromKey);
+            const toIdx = columnOrder.indexOf(toKey);
+
+            // Reorder
+            columnOrder.splice(fromIdx, 1);
+            columnOrder.splice(toIdx, 0, fromKey);
+
+            // Update order values
+            columnOrder.forEach((key, idx) => {
+                columnSettings[key].order = idx;
+            });
+
+            renderTable();
+        });
+    });
+}
+
 async function saveSettings() {
+    // Ensure order is up to date
+    columnOrder.forEach((key, idx) => {
+        columnSettings[key].order = idx;
+    });
+
     try {
         const response = await fetch('/admin/settings', {
             method: 'POST',
@@ -127,14 +192,11 @@ async function saveSettings() {
 }
 
 async function resetDefaults() {
-    if (!confirm('Reset all column visibility settings to defaults?')) return;
-
+    if (!confirm('Reset all column settings to defaults?')) return;
     try {
-        const response = await fetch('/admin/settings/reset', {
-            method: 'POST'
-        });
+        const response = await fetch('/admin/settings/reset', { method: 'POST' });
         const data = await response.json();
-        showToast(data.message || 'Settings reset to defaults', 'success');
+        showToast(data.message || 'Settings reset', 'success');
         loadSettings();
     } catch (error) {
         showToast('Failed to reset settings', 'danger');
