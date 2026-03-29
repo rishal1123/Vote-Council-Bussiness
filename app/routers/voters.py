@@ -241,21 +241,7 @@ async def list_voters(
     # Order and paginate
     voters = query.order_by(Voter.name).offset(offset).limit(limit).all()
 
-    return [
-        VoterListResponse(
-            id=v.id,
-            name=v.name,
-            voter_id=v.voter_id,
-            national_id=v.national_id,
-            photo_path=v.photo_path,
-            box={"id": v.box.id, "name": v.box.name} if v.box else None,
-            is_pledged=v.is_pledged,
-            vote_status=v.vote_status,
-            contact=v.contact,
-            focals=[{"id": f.id, "name": f.name} for f in v.focals]
-        )
-        for v in voters
-    ]
+    return [VoterListResponse.model_validate(v) for v in voters]
 
 
 @router.get("/count")
