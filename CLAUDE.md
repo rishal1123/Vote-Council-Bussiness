@@ -73,7 +73,7 @@ static/
 ├── manifest.json, icons/
 uploads/                 # Voter photos
 Sample Data/             # Example Excel import file
-app_settings.json        # Column visibility/order + voting open state (auto-created)
+app_settings.json        # Legacy (settings now stored in DB)
 Dockerfile, docker-compose.yml
 cloudflare-firewall.sh   # Restrict port 80 to Cloudflare IPs only
 ```
@@ -97,7 +97,10 @@ cloudflare-firewall.sh   # Restrict port 80 to Cloudflare IPs only
 - **Auth:** `get_current_user` (optional), `get_current_user_required` (mandatory), `require_role()` factory
 - **Voting page** (`/voting`): Two search modes — Box# prefix (cached in localStorage) or National ID. Exact match only. 2-step flow: voted? → select candidate or "Not Disclosed". Quick "Vote as Pledged" button for pledged voters
 - **Pledge status:** 3-state enum (yes/no/undecided), not boolean. Admin can bulk-update via checkboxes
-- **Column selector:** Voters list has toggleable columns (21 columns, saved in localStorage). Admin can configure default visibility and order via Display Settings (drag-to-reorder)
+- **Column selector:** Voters list has 22 toggleable columns (Photo and Name are separate columns). User prefs saved in localStorage, admin configures defaults via Display Settings (drag-to-reorder + up/down arrows). Column sort by clicking headers (asc/desc)
+- **"Not Voted only" toggle:** Sticky switch on voters list, saved in localStorage, locks status filter
+- **"Voted (All)" filter:** Shows all voters who voted (pledged + other + undecided)
+- **Display settings stored in DB:** Settings table (key/value), persists across Docker rebuilds, included in backups
 - **Focal dashboard:** focal users see only their assigned voters' stats
 - **Focals** sorted alphabetically by default
 - **Security headers:** CSP (with Cloudflare analytics), X-Frame-Options, XSS-Protection, Referrer-Policy
@@ -109,6 +112,8 @@ cloudflare-firewall.sh   # Restrict port 80 to Cloudflare IPs only
 - **Database backups:** SQLite backup API (not file copy) for consistent WAL-mode backups. Auto-backup every 15 mins when voting is open. Admin can download backups
 - **System stats:** Admin page shows Python version, DB size, platform info
 - **VoterListResponse** uses `model_validate()` not manual construction — ensures all ORM fields are serialized
+- **Cache busting:** Static files have `?v=X.Y.Z` query strings, HTML pages send `Cache-Control: no-cache`
+- **Version:** `APP_VERSION` in config.py, bump on each release to bust browser/SW cache
 
 ## Database Models
 
@@ -120,6 +125,7 @@ cloudflare-firewall.sh   # Restrict port 80 to Cloudflare IPs only
 | Focal | name, phone, user_id → many-to-many with voters |
 | Candidate | name, party, number, is_pledged (boolean - one pledged candidate) |
 | ActivityLog | timestamp, user_id, username, action, entity_type, entity_id, details, ip_address |
+| Setting | key (unique), value (text) — stores column_settings JSON and voting_open flag |
 
 **Enums:** `VoteStatus` (not_voted, voted_pledged, voted_other, undecided), `PledgeStatus` (yes, no, undecided), `UserRole` (admin, focal, operator)
 
