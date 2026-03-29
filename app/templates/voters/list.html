@@ -25,16 +25,28 @@
                 <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside">
                     <i class="bi bi-layout-three-columns"></i><span class="d-none d-md-inline"> Columns</span>
                 </button>
-                <div class="dropdown-menu dropdown-menu-end p-2" style="min-width: 200px;" id="columnDropdown">
+                <div class="dropdown-menu dropdown-menu-end p-2" style="min-width: 220px; max-height: 400px; overflow-y: auto;" id="columnDropdown">
+                    <small class="text-muted px-1">Toggle columns</small>
+                    <hr class="my-1">
                     <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colPhoto" data-col="photo" checked><label class="form-check-label" for="colPhoto">Photo</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colEc" data-col="ec_number"><label class="form-check-label" for="colEc">EC #</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colVoterId" data-col="voter_id"><label class="form-check-label" for="colVoterId">Voter # (Seq)</label></div>
                     <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colNationalId" data-col="national_id" checked><label class="form-check-label" for="colNationalId">National ID</label></div>
-                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colBox" data-col="box" checked><label class="form-check-label" for="colBox">Box</label></div>
-                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colContact" data-col="contact" checked><label class="form-check-label" for="colContact">Contact</label></div>
-                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colFocals" data-col="focals" checked><label class="form-check-label" for="colFocals">Focals</label></div>
                     <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colGender" data-col="gender"><label class="form-check-label" for="colGender">Gender</label></div>
                     <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colAge" data-col="age"><label class="form-check-label" for="colAge">Age</label></div>
-                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colAddress" data-col="address"><label class="form-check-label" for="colAddress">Address</label></div>
                     <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colParty" data-col="party"><label class="form-check-label" for="colParty">Party</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colAddress" data-col="address"><label class="form-check-label" for="colAddress">Address</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colContact" data-col="contact" checked><label class="form-check-label" for="colContact">Contact</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colNewContact" data-col="new_contact"><label class="form-check-label" for="colNewContact">New Contact</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colPrevIsland" data-col="prev_island"><label class="form-check-label" for="colPrevIsland">Previous Island</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colPrevAddress" data-col="prev_address"><label class="form-check-label" for="colPrevAddress">Previous Address</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colCurLocation" data-col="cur_location"><label class="form-check-label" for="colCurLocation">Current Location</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colBox" data-col="box" checked><label class="form-check-label" for="colBox">Registered Box</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colBoxNum" data-col="box_number"><label class="form-check-label" for="colBoxNum">Box #</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colZone" data-col="zone"><label class="form-check-label" for="colZone">Zone</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colFocals" data-col="focals" checked><label class="form-check-label" for="colFocals">Focals</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colFocalComment" data-col="focal_comment"><label class="form-check-label" for="colFocalComment">Focal Comment</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colRemarks" data-col="remarks"><label class="form-check-label" for="colRemarks">Remarks</label></div>
                     <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colPledged" data-col="pledged" checked><label class="form-check-label" for="colPledged">Pledged</label></div>
                     <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colStatus" data-col="status" checked><label class="form-check-label" for="colStatus">Vote Status</label></div>
                 </div>
@@ -178,7 +190,7 @@ let focals = [];
 const isAdmin = {{ 'true' if user.role.value == 'admin' else 'false' }};
 
 // Column visibility
-const defaultCols = {photo: true, national_id: true, box: true, contact: true, focals: true, gender: false, age: false, address: false, party: false, pledged: true, status: true};
+const defaultCols = {photo: true, ec_number: false, voter_id: false, national_id: true, gender: false, age: false, party: false, address: false, contact: true, new_contact: false, prev_island: false, prev_address: false, cur_location: false, box: true, box_number: false, zone: false, focals: true, focal_comment: false, remarks: false, pledged: true, status: true};
 let visibleCols = {...defaultCols};
 
 function loadColumnPrefs() {
@@ -288,13 +300,14 @@ async function loadVoters() {
     }
 }
 
+const allCols = ['ec_number','voter_id','national_id','gender','age','party','address','contact','new_contact','prev_island','prev_address','cur_location','box','box_number','zone','focals','focal_comment','remarks','pledged','status'];
+const colHeaders = {ec_number:'EC#', voter_id:'#', national_id:'ID', gender:'Gender', age:'Age', party:'Party', address:'Address', contact:'Contact', new_contact:'New Contact', prev_island:'Prev Island', prev_address:'Prev Address', cur_location:'Location', box:'Box', box_number:'Box#', zone:'Zone', focals:'Focals', focal_comment:'Focal Comment', remarks:'Remarks', pledged:'Pledged', status:'Status'};
+const hideMobile = new Set(['contact','new_contact','focals','gender','age','party','address','prev_island','prev_address','cur_location','box_number','zone','focal_comment','remarks']);
+
 function getColCount() {
-    let count = 1; // Name always shown
-    if (isAdmin) count++; // Checkbox
-    for (const col of ['box', 'contact', 'focals', 'gender', 'age', 'address', 'party', 'pledged', 'status']) {
-        if (isColVisible(col)) count++;
-    }
-    if (isAdmin) count++; // Actions
+    let count = 1; // Name
+    if (isAdmin) count += 2; // Checkbox + Actions
+    for (const col of allCols) { if (isColVisible(col)) count++; }
     return count;
 }
 
@@ -303,20 +316,15 @@ function buildTableHeader() {
     let html = '<tr>';
     if (isAdmin) html += '<th class="text-center" style="width:40px;"><input type="checkbox" class="form-check-input" id="selectAll" title="Select all"></th>';
     html += '<th>Name</th>';
-    if (isColVisible('box')) html += '<th>Box</th>';
-    if (isColVisible('contact')) html += '<th class="d-none d-md-table-cell">Contact</th>';
-    if (isColVisible('focals')) html += '<th class="d-none d-md-table-cell">Focals</th>';
-    if (isColVisible('gender')) html += '<th class="text-center d-none d-md-table-cell">Gender</th>';
-    if (isColVisible('age')) html += '<th class="text-center d-none d-md-table-cell">Age</th>';
-    if (isColVisible('address')) html += '<th class="d-none d-lg-table-cell">Address</th>';
-    if (isColVisible('party')) html += '<th class="d-none d-md-table-cell">Party</th>';
-    if (isColVisible('pledged')) html += '<th class="text-center">Pledged</th>';
-    if (isColVisible('status')) html += '<th class="text-center">Status</th>';
+    for (const col of allCols) {
+        if (!isColVisible(col)) continue;
+        const cls = hideMobile.has(col) ? ' class="d-none d-md-table-cell"' : (col === 'pledged' || col === 'status' || col === 'age' || col === 'gender' || col === 'ec_number' || col === 'voter_id') ? ' class="text-center"' : '';
+        html += `<th${cls}>${colHeaders[col]}</th>`;
+    }
     if (isAdmin) html += '<th class="text-center">Actions</th>';
     html += '</tr>';
     thead.innerHTML = html;
 
-    // Re-bind select-all
     const selectAll = document.getElementById('selectAll');
     if (selectAll) {
         selectAll.addEventListener('change', (e) => {
@@ -343,21 +351,39 @@ function renderVoters(voters) {
                 ? `<img src="/uploads/${encodeURIComponent(voter.photo_path)}" class="voter-avatar" alt="">`
                 : `<span class="voter-avatar-ph"><i class="bi bi-person text-muted"></i></span>`)
             : '';
-        const natId = isColVisible('national_id') && voter.national_id
-            ? `<br><small class="text-muted">${escapeHtml(voter.national_id)}</small>` : '';
 
         let row = '<tr>';
         if (isAdmin) row += `<td class="text-center"><input type="checkbox" class="form-check-input voter-checkbox" value="${voter.id}" onchange="toggleVoterSelection(${voter.id}, this.checked)"></td>`;
-        row += `<td><div class="d-flex align-items-center gap-2">${photo}<div><a href="/voters/${voter.id}/view">${escapeHtml(voter.name)}</a>${natId}</div></div></td>`;
-        if (isColVisible('box')) row += `<td>${voter.box ? escapeHtml(voter.box.name) : '-'}</td>`;
-        if (isColVisible('contact')) row += `<td class="d-none d-md-table-cell">${escapeHtml(voter.contact || voter.new_contact || '') || '-'}</td>`;
-        if (isColVisible('focals')) row += `<td class="d-none d-md-table-cell">${voter.focals.map(f => '<span class="badge bg-light text-dark">' + escapeHtml(f.name) + '</span>').join(' ')}</td>`;
-        if (isColVisible('gender')) row += `<td class="text-center d-none d-md-table-cell">${escapeHtml(voter.gender || '-')}</td>`;
-        if (isColVisible('age')) row += `<td class="text-center d-none d-md-table-cell">${voter.age || '-'}</td>`;
-        if (isColVisible('address')) row += `<td class="d-none d-lg-table-cell"><small>${escapeHtml(voter.address || '-')}</small></td>`;
-        if (isColVisible('party')) row += `<td class="d-none d-md-table-cell">${escapeHtml(voter.party || '-')}</td>`;
-        if (isColVisible('pledged')) row += `<td class="text-center">${voter.is_pledged === 'yes' ? '<i class="bi bi-check-circle-fill text-success"></i>' : voter.is_pledged === 'undecided' ? '<i class="bi bi-question-circle-fill text-warning"></i>' : '<i class="bi bi-dash text-muted"></i>'}</td>`;
-        if (isColVisible('status')) row += `<td class="text-center">${getStatusBadge(voter.vote_status)}</td>`;
+        row += `<td><div class="d-flex align-items-center gap-2">${photo}<div><a href="/voters/${voter.id}/view">${escapeHtml(voter.name)}</a></div></div></td>`;
+
+        // Dynamic columns in same order as allCols
+        const colRenderers = {
+            ec_number: () => `<td class="text-center">${voter.ec_number || '-'}</td>`,
+            voter_id: () => `<td class="text-center">${escapeHtml(voter.voter_id || '-')}</td>`,
+            national_id: () => `<td>${escapeHtml(voter.national_id || '-')}</td>`,
+            gender: () => `<td class="text-center">${escapeHtml(voter.gender || '-')}</td>`,
+            age: () => `<td class="text-center">${voter.age || '-'}</td>`,
+            party: () => `<td class="d-none d-md-table-cell">${escapeHtml(voter.party || '-')}</td>`,
+            address: () => `<td class="d-none d-md-table-cell"><small>${escapeHtml(voter.address || '-')}</small></td>`,
+            contact: () => `<td class="d-none d-md-table-cell">${escapeHtml(voter.contact || '') || '-'}</td>`,
+            new_contact: () => `<td class="d-none d-md-table-cell">${escapeHtml(voter.new_contact || '') || '-'}</td>`,
+            prev_island: () => `<td class="d-none d-md-table-cell">${escapeHtml(voter.previous_island || '-')}</td>`,
+            prev_address: () => `<td class="d-none d-md-table-cell"><small>${escapeHtml(voter.previous_address || '-')}</small></td>`,
+            cur_location: () => `<td class="d-none d-md-table-cell">${escapeHtml(voter.current_location || '-')}</td>`,
+            box: () => `<td>${voter.box ? escapeHtml(voter.box.name) : '-'}</td>`,
+            box_number: () => `<td class="d-none d-md-table-cell">${escapeHtml(voter.box_number || '-')}</td>`,
+            zone: () => `<td class="d-none d-md-table-cell">${escapeHtml(voter.zone || '-')}</td>`,
+            focals: () => `<td class="d-none d-md-table-cell">${voter.focals.map(f => '<span class="badge bg-light text-dark">' + escapeHtml(f.name) + '</span>').join(' ')}</td>`,
+            focal_comment: () => `<td class="d-none d-md-table-cell"><small>${escapeHtml(voter.focal_comment || '-')}</small></td>`,
+            remarks: () => `<td class="d-none d-md-table-cell"><small>${escapeHtml(voter.remarks || '-')}</small></td>`,
+            pledged: () => `<td class="text-center">${voter.is_pledged === 'yes' ? '<i class="bi bi-check-circle-fill text-success"></i>' : voter.is_pledged === 'undecided' ? '<i class="bi bi-question-circle-fill text-warning"></i>' : '<i class="bi bi-dash text-muted"></i>'}</td>`,
+            status: () => `<td class="text-center">${getStatusBadge(voter.vote_status)}</td>`
+        };
+
+        for (const col of allCols) {
+            if (isColVisible(col) && colRenderers[col]) row += colRenderers[col]();
+        }
+
         if (isAdmin) row += `<td class="text-center"><button class="btn btn-sm btn-outline-primary" data-voter-id="${voter.id}" data-voter-name="${escapeHtml(voter.name)}" onclick="openPledgeModal(this.dataset.voterId, this.dataset.voterName)"><i class="bi bi-hand-thumbs-up"></i></button></td>`;
         row += '</tr>';
         return row;

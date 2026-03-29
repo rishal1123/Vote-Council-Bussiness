@@ -74,6 +74,10 @@ class BoxBrief(BaseModel):
 
 class VoterResponse(VoterBase):
     id: int
+    ec_number: Optional[int] = None
+    national_id: Optional[str] = None
+    box_number: Optional[str] = None
+    remarks: Optional[str] = None
     photo_path: Optional[str] = None
     box_id: Optional[int] = None
     box: Optional[BoxBrief] = None
@@ -90,14 +94,27 @@ class VoterResponse(VoterBase):
 
 class VoterListResponse(BaseModel):
     id: int
-    name: str
+    ec_number: Optional[int] = None
     voter_id: Optional[str] = None
     national_id: Optional[str] = None
+    name: str
+    gender: Optional[str] = None
+    age: Optional[int] = None
+    party: Optional[str] = None
+    address: Optional[str] = None
+    contact: Optional[str] = None
+    new_contact: Optional[str] = None
+    previous_island: Optional[str] = None
+    previous_address: Optional[str] = None
+    current_location: Optional[str] = None
+    box_number: Optional[str] = None
+    zone: Optional[str] = None
+    focal_comment: Optional[str] = None
+    remarks: Optional[str] = None
     photo_path: Optional[str] = None
     box: Optional[BoxBrief] = None
     is_pledged: PledgeStatus
     vote_status: VoteStatus
-    contact: Optional[str] = None
     focals: List[FocalBrief] = []
 
     class Config:
