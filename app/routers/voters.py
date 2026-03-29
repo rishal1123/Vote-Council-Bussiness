@@ -202,6 +202,8 @@ async def list_voters(
     focal_id: Optional[int] = Query(None),
     vote_status: Optional[str] = Query(None),
     is_pledged: Optional[str] = Query(None),
+    sort_by: Optional[str] = Query(None),
+    sort_dir: Optional[str] = Query("asc"),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -244,8 +246,16 @@ async def list_voters(
         except ValueError:
             pass
 
-    # Order and paginate
-    voters = query.order_by(Voter.name).offset(offset).limit(limit).all()
+    # Sorting
+    sort_map = {
+        'name': Voter.name, 'ec_number': Voter.ec_number, 'voter_id': Voter.voter_id,
+        'national_id': Voter.national_id, 'gender': Voter.gender, 'age': Voter.age,
+        'party': Voter.party, 'contact': Voter.contact, 'zone': Voter.zone,
+        'box_number': Voter.box_number, 'pledged': Voter.is_pledged, 'status': Voter.vote_status,
+    }
+    sort_column = sort_map.get(sort_by, Voter.name)
+    order = sort_column.desc() if sort_dir == 'desc' else sort_column.asc()
+    voters = query.order_by(order).offset(offset).limit(limit).all()
 
     return [VoterListResponse.model_validate(v) for v in voters]
 
