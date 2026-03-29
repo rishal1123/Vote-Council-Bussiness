@@ -1,6 +1,6 @@
 // VoteCouncil Service Worker
-const CACHE_NAME = 'votecouncil-v2';
-const STATIC_CACHE = 'votecouncil-static-v2';
+const CACHE_NAME = 'votecouncil-v3';
+const STATIC_CACHE = 'votecouncil-static-v3';
 
 // Static assets to cache
 const STATIC_ASSETS = [
