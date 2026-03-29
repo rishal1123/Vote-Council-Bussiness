@@ -219,7 +219,7 @@ async function loadColumnPrefs() {
         .filter(([k,v]) => typeof v === 'object' && k !== 'name')
         .sort((a,b) => (a[1].order ?? 999) - (b[1].order ?? 999));
 
-    colOrder = entries.map(([k]) => colKeyMap[k] || k).filter(k => k !== 'name');
+    colOrder = entries.map(([k]) => colKeyMap[k] || k).filter(k => k !== 'name' && k !== 'photo');
 
     // Set defaults from admin 'list' visibility
     const defaults = {};
@@ -239,9 +239,13 @@ async function loadColumnPrefs() {
         visibleCols = defaults;
     }
 
-    // Rebuild dropdown checkboxes in admin order
+    // Rebuild dropdown checkboxes — photo first (special), then columns in admin order
     const dropdown = document.getElementById('columnDropdown');
     let html = '<small class="text-muted px-1">Toggle columns</small><hr class="my-1">';
+    // Photo toggle (rendered inside Name cell, not a table column)
+    const photoChecked = visibleCols['photo'] ? 'checked' : '';
+    html += `<div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="col_photo" data-col="photo" ${photoChecked}><label class="form-check-label" for="col_photo">Photo</label></div>`;
+    html += '<hr class="my-1">';
     for (const jsKey of colOrder) {
         const adminKey = jsToAdmin[jsKey] || jsKey;
         const label = (adminColSettings[adminKey] || {}).label || jsKey;
