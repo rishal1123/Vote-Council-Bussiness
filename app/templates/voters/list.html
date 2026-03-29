@@ -350,7 +350,6 @@ async function loadVoters() {
     }
 }
 
-const hideMobile = new Set(['contact','new_contact','focals','gender','age','party','address','prev_island','prev_address','cur_location','box_number','zone','focal_comment','remarks']);
 const centerCols = new Set(['ec_number','voter_id','gender','age','pledged','status']);
 
 function getColCount() {
@@ -365,11 +364,9 @@ function getColLabel(jsKey) {
     return (adminColSettings[adminKey] || {}).label || jsKey;
 }
 
-function colClasses(col, extra) {
+function colClasses(col) {
     const classes = [];
-    if (hideMobile.has(col)) classes.push('d-none', 'd-md-table-cell');
     if (centerCols.has(col)) classes.push('text-center');
-    if (extra) classes.push(extra);
     return classes.length ? ` class="${classes.join(' ')}"` : '';
 }
 
