@@ -222,7 +222,8 @@ async def list_voters(
             (Voter.name.ilike(search_term)) |
             (Voter.voter_id.ilike(search_term)) |
             (Voter.national_id.ilike(search_term)) |
-            (Voter.contact.ilike(search_term))
+            (Voter.contact.ilike(search_term)) |
+            (Voter.box_number.ilike(search_term))
         )
 
     if box_id:
@@ -279,7 +280,8 @@ async def count_voters(
             (Voter.name.ilike(search_term)) |
             (Voter.voter_id.ilike(search_term)) |
             (Voter.national_id.ilike(search_term)) |
-            (Voter.contact.ilike(search_term))
+            (Voter.contact.ilike(search_term)) |
+            (Voter.box_number.ilike(search_term))
         )
 
     if box_id:
