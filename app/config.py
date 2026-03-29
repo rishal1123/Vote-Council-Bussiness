@@ -4,6 +4,7 @@ from pathlib import Path
 
 class Settings(BaseSettings):
     APP_NAME: str = "VoteCouncil"
+    APP_VERSION: str = "1.3.0"
     DEBUG: bool = False
 
     # Database

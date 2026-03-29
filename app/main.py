@@ -19,11 +19,12 @@ from app.routers import auth, voters, focals, candidates, boxes, import_data, da
 app = FastAPI(
     title=settings.APP_NAME,
     description="Voter Management PWA for Election Day",
-    version="1.0.0",
+    version=settings.APP_VERSION,
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
 )
+
 
 # Security headers middleware
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
