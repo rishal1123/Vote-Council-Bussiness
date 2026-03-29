@@ -32,6 +32,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Allow service worker from /static/ to control / scope
         if request.url.path == "/static/sw.js":
             response.headers["Service-Worker-Allowed"] = "/"
+        # Prevent caching HTML pages (ensures latest JS is always served)
+        content_type = response.headers.get("content-type", "")
+        if "text/html" in content_type:
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
