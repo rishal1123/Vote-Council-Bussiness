@@ -238,6 +238,9 @@ async function loadColumnPrefs() {
     } else {
         visibleCols = defaults;
     }
+    // Name and photo always visible (cannot be disabled)
+    visibleCols['name'] = true;
+    if (!('photo' in visibleCols)) visibleCols['photo'] = true;
 
     // Rebuild dropdown checkboxes — photo first (special), then columns in admin order
     const dropdown = document.getElementById('columnDropdown');
