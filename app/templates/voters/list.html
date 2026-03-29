@@ -356,7 +356,7 @@ const centerCols = new Set(['ec_number','voter_id','gender','age','pledged','sta
 function getColCount() {
     let count = 1; // Name
     if (isAdmin) count += 2; // Checkbox + Actions
-    for (const col of colOrder) { if (isColVisible(col)) count++; }
+    for (const col of colOrder) { if (isColVisible(col) && col !== 'photo') count++; }
     return count;
 }
 
@@ -379,7 +379,7 @@ function buildTableHeader() {
     if (isAdmin) html += '<th class="text-center" style="width:40px;"><input type="checkbox" class="form-check-input" id="selectAll" title="Select all"></th>';
     html += '<th>Name</th>';
     for (const col of colOrder) {
-        if (!isColVisible(col)) continue;
+        if (!isColVisible(col) || col === 'photo') continue; // photo is inside Name cell
         html += `<th${colClasses(col)}>${escapeHtml(getColLabel(col))}</th>`;
     }
     if (isAdmin) html += '<th class="text-center">Actions</th>';
@@ -442,6 +442,7 @@ function renderVoters(voters) {
         };
 
         for (const col of colOrder) {
+            if (col === 'photo') continue; // photo is inside Name cell
             if (isColVisible(col) && colRenderers[col]) row += colRenderers[col]();
         }
 
