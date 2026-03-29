@@ -21,6 +21,24 @@
             <small class="text-muted d-none d-sm-inline">Manage voter records and pledge status</small>
         </div>
         <div class="d-flex flex-wrap gap-2">
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                    <i class="bi bi-layout-three-columns"></i><span class="d-none d-md-inline"> Columns</span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end p-2" style="min-width: 200px;" id="columnDropdown">
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colPhoto" data-col="photo" checked><label class="form-check-label" for="colPhoto">Photo</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colNationalId" data-col="national_id" checked><label class="form-check-label" for="colNationalId">National ID</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colBox" data-col="box" checked><label class="form-check-label" for="colBox">Box</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colContact" data-col="contact" checked><label class="form-check-label" for="colContact">Contact</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colFocals" data-col="focals" checked><label class="form-check-label" for="colFocals">Focals</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colGender" data-col="gender"><label class="form-check-label" for="colGender">Gender</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colAge" data-col="age"><label class="form-check-label" for="colAge">Age</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colAddress" data-col="address"><label class="form-check-label" for="colAddress">Address</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colParty" data-col="party"><label class="form-check-label" for="colParty">Party</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colPledged" data-col="pledged" checked><label class="form-check-label" for="colPledged">Pledged</label></div>
+                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colStatus" data-col="status" checked><label class="form-check-label" for="colStatus">Vote Status</label></div>
+                </div>
+            </div>
             <button class="btn btn-outline-secondary btn-sm" onclick="openPrintView()"><i class="bi bi-printer"></i><span class="d-none d-md-inline"> Print</span></button>
             <button class="btn btn-export btn-sm" onclick="exportFilteredCSV()"><i class="bi bi-download"></i><span class="d-none d-md-inline"> CSV</span></button>
             <button class="btn btn-export btn-sm" onclick="exportFilteredPDF()"><i class="bi bi-file-earmark-pdf"></i><span class="d-none d-md-inline"> PDF</span></button>
@@ -76,23 +94,8 @@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            {% if user.role.value == 'admin' %}
-                            <th class="text-center" style="width: 40px;">
-                                <input type="checkbox" class="form-check-input" id="selectAll" title="Select all">
-                            </th>
-                            {% endif %}
-                            <th>Name</th>
-                            <th>Box</th>
-                            <th class="d-none d-md-table-cell">Contact</th>
-                            <th class="d-none d-md-table-cell">Focals</th>
-                            <th class="text-center">Pledged</th>
-                            <th class="text-center">Status</th>
-                            {% if user.role.value == 'admin' %}
-                            <th class="text-center">Actions</th>
-                            {% endif %}
-                        </tr>
+                    <thead class="table-light" id="voterTableHead">
+                        <!-- Built dynamically by JS -->
                     </thead>
                     <tbody id="voterList">
                         <tr>
@@ -172,11 +175,44 @@ let currentPage = 0;
 const pageSize = 50;
 let boxes = [];
 let focals = [];
+const isAdmin = {{ 'true' if user.role.value == 'admin' else 'false' }};
+
+// Column visibility
+const defaultCols = {photo: true, national_id: true, box: true, contact: true, focals: true, gender: false, age: false, address: false, party: false, pledged: true, status: true};
+let visibleCols = {...defaultCols};
+
+function loadColumnPrefs() {
+    const saved = localStorage.getItem('votecouncil_voter_cols');
+    if (saved) {
+        try { visibleCols = {...defaultCols, ...JSON.parse(saved)}; } catch(e) {}
+    }
+    // Sync checkboxes
+    document.querySelectorAll('.col-toggle').forEach(cb => {
+        cb.checked = visibleCols[cb.dataset.col] ?? false;
+    });
+}
+
+function saveColumnPrefs() {
+    localStorage.setItem('votecouncil_voter_cols', JSON.stringify(visibleCols));
+}
+
+function isColVisible(col) { return visibleCols[col] ?? false; }
 
 // Load initial data
 document.addEventListener('DOMContentLoaded', async () => {
+    loadColumnPrefs();
+    // Column toggle handlers
+    document.querySelectorAll('.col-toggle').forEach(cb => {
+        cb.addEventListener('change', () => {
+            visibleCols[cb.dataset.col] = cb.checked;
+            saveColumnPrefs();
+            buildTableHeader();
+            loadVoters();
+        });
+    });
     await loadFilters();
     applyUrlParams();
+    buildTableHeader();
     loadVoters();
 });
 
@@ -252,57 +288,81 @@ async function loadVoters() {
     }
 }
 
+function getColCount() {
+    let count = 1; // Name always shown
+    if (isAdmin) count++; // Checkbox
+    for (const col of ['box', 'contact', 'focals', 'gender', 'age', 'address', 'party', 'pledged', 'status']) {
+        if (isColVisible(col)) count++;
+    }
+    if (isAdmin) count++; // Actions
+    return count;
+}
+
+function buildTableHeader() {
+    const thead = document.getElementById('voterTableHead');
+    let html = '<tr>';
+    if (isAdmin) html += '<th class="text-center" style="width:40px;"><input type="checkbox" class="form-check-input" id="selectAll" title="Select all"></th>';
+    html += '<th>Name</th>';
+    if (isColVisible('box')) html += '<th>Box</th>';
+    if (isColVisible('contact')) html += '<th class="d-none d-md-table-cell">Contact</th>';
+    if (isColVisible('focals')) html += '<th class="d-none d-md-table-cell">Focals</th>';
+    if (isColVisible('gender')) html += '<th class="text-center d-none d-md-table-cell">Gender</th>';
+    if (isColVisible('age')) html += '<th class="text-center d-none d-md-table-cell">Age</th>';
+    if (isColVisible('address')) html += '<th class="d-none d-lg-table-cell">Address</th>';
+    if (isColVisible('party')) html += '<th class="d-none d-md-table-cell">Party</th>';
+    if (isColVisible('pledged')) html += '<th class="text-center">Pledged</th>';
+    if (isColVisible('status')) html += '<th class="text-center">Status</th>';
+    if (isAdmin) html += '<th class="text-center">Actions</th>';
+    html += '</tr>';
+    thead.innerHTML = html;
+
+    // Re-bind select-all
+    const selectAll = document.getElementById('selectAll');
+    if (selectAll) {
+        selectAll.addEventListener('change', (e) => {
+            document.querySelectorAll('.voter-checkbox').forEach(cb => {
+                cb.checked = e.target.checked;
+                toggleVoterSelection(parseInt(cb.value), e.target.checked);
+            });
+        });
+    }
+}
+
 function renderVoters(voters) {
     const tbody = document.getElementById('voterList');
+    const colCount = getColCount();
 
     if (voters.length === 0) {
-        tbody.innerHTML = `
-            <tr><td colspan="8" class="text-center py-5">No voters found</td></tr>
-        `;
+        tbody.innerHTML = `<tr><td colspan="${colCount}" class="text-center py-5">No voters found</td></tr>`;
         return;
     }
 
-    tbody.innerHTML = voters.map(voter => `
-        <tr>
-            {% if user.role.value == 'admin' %}
-            <td class="text-center">
-                <input type="checkbox" class="form-check-input voter-checkbox" value="${voter.id}" onchange="toggleVoterSelection(${voter.id}, this.checked)">
-            </td>
-            {% endif %}
-            <td>
-                <div class="d-flex align-items-center gap-2">
-                    ${voter.photo_path
-                        ? `<img src="/uploads/${encodeURIComponent(voter.photo_path)}" class="voter-avatar" alt="">`
-                        : `<span class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center" style="width:32px;height:32px;"><i class="bi bi-person text-muted"></i></span>`
-                    }
-                    <div>
-                        <a href="/voters/${voter.id}/view">${escapeHtml(voter.name)}</a>
-                        ${voter.national_id ? `<br><small class="text-muted">${escapeHtml(voter.national_id)}</small>` : ''}
-                    </div>
-                </div>
-            </td>
-            <td>${voter.box ? escapeHtml(voter.box.name) : '-'}</td>
-            <td class="d-none d-md-table-cell">${escapeHtml(voter.contact) || '-'}</td>
-            <td class="d-none d-md-table-cell">
-                ${voter.focals.map(f => `<span class="badge bg-light text-dark">${escapeHtml(f.name)}</span>`).join(' ')}
-            </td>
-            <td class="text-center">
-                ${voter.is_pledged === 'yes' ? '<i class="bi bi-check-circle-fill text-success"></i>' : voter.is_pledged === 'undecided' ? '<i class="bi bi-question-circle-fill text-warning"></i>' : '<i class="bi bi-dash text-muted"></i>'}
-            </td>
-            <td class="text-center">
-                ${getStatusBadge(voter.vote_status)}
-            </td>
-            {% if user.role.value == 'admin' %}
-            <td class="text-center">
-                <button class="btn btn-sm btn-outline-primary" data-voter-id="${voter.id}" data-voter-name="${escapeHtml(voter.name)}" onclick="openPledgeModal(this.dataset.voterId, this.dataset.voterName)">
-                    <i class="bi bi-hand-thumbs-up"></i>
-                </button>
-            </td>
-            {% endif %}
-        </tr>
-    `).join('');
+    tbody.innerHTML = voters.map(voter => {
+        const photo = isColVisible('photo')
+            ? (voter.photo_path
+                ? `<img src="/uploads/${encodeURIComponent(voter.photo_path)}" class="voter-avatar" alt="">`
+                : `<span class="voter-avatar-ph"><i class="bi bi-person text-muted"></i></span>`)
+            : '';
+        const natId = isColVisible('national_id') && voter.national_id
+            ? `<br><small class="text-muted">${escapeHtml(voter.national_id)}</small>` : '';
 
-    // Reset select-all checkbox
+        let row = '<tr>';
+        if (isAdmin) row += `<td class="text-center"><input type="checkbox" class="form-check-input voter-checkbox" value="${voter.id}" onchange="toggleVoterSelection(${voter.id}, this.checked)"></td>`;
+        row += `<td><div class="d-flex align-items-center gap-2">${photo}<div><a href="/voters/${voter.id}/view">${escapeHtml(voter.name)}</a>${natId}</div></div></td>`;
+        if (isColVisible('box')) row += `<td>${voter.box ? escapeHtml(voter.box.name) : '-'}</td>`;
+        if (isColVisible('contact')) row += `<td class="d-none d-md-table-cell">${escapeHtml(voter.contact || voter.new_contact || '') || '-'}</td>`;
+        if (isColVisible('focals')) row += `<td class="d-none d-md-table-cell">${voter.focals.map(f => '<span class="badge bg-light text-dark">' + escapeHtml(f.name) + '</span>').join(' ')}</td>`;
+        if (isColVisible('gender')) row += `<td class="text-center d-none d-md-table-cell">${escapeHtml(voter.gender || '-')}</td>`;
+        if (isColVisible('age')) row += `<td class="text-center d-none d-md-table-cell">${voter.age || '-'}</td>`;
+        if (isColVisible('address')) row += `<td class="d-none d-lg-table-cell"><small>${escapeHtml(voter.address || '-')}</small></td>`;
+        if (isColVisible('party')) row += `<td class="d-none d-md-table-cell">${escapeHtml(voter.party || '-')}</td>`;
+        if (isColVisible('pledged')) row += `<td class="text-center">${voter.is_pledged === 'yes' ? '<i class="bi bi-check-circle-fill text-success"></i>' : voter.is_pledged === 'undecided' ? '<i class="bi bi-question-circle-fill text-warning"></i>' : '<i class="bi bi-dash text-muted"></i>'}</td>`;
+        if (isColVisible('status')) row += `<td class="text-center">${getStatusBadge(voter.vote_status)}</td>`;
+        if (isAdmin) row += `<td class="text-center"><button class="btn btn-sm btn-outline-primary" data-voter-id="${voter.id}" data-voter-name="${escapeHtml(voter.name)}" onclick="openPledgeModal(this.dataset.voterId, this.dataset.voterName)"><i class="bi bi-hand-thumbs-up"></i></button></td>`;
+        row += '</tr>';
+        return row;
+    }).join('');
+
     const selectAll = document.getElementById('selectAll');
     if (selectAll) selectAll.checked = false;
 }
