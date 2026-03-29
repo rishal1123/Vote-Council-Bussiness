@@ -216,7 +216,7 @@ async function loadColumnPrefs() {
 
     // Build ordered column list from admin settings
     const entries = Object.entries(adminColSettings)
-        .filter(([k,v]) => typeof v === 'object' && k !== 'name')
+        .filter(([k,v]) => typeof v === 'object')
         .sort((a,b) => (a[1].order ?? 999) - (b[1].order ?? 999));
 
     colOrder = entries.map(([k]) => colKeyMap[k] || k).filter(k => k !== 'photo');
