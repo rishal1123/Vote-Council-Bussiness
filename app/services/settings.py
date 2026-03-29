@@ -1,7 +1,6 @@
 import json
-import os
-
-SETTINGS_FILE = "app_settings.json"
+from app.database import SessionLocal
+from app.models.setting import Setting
 
 DEFAULT_COLUMNS = {
     "photo": {"label": "Photo", "order": 0, "list": True, "print": False, "pdf": True, "detail": True},
@@ -28,27 +27,59 @@ DEFAULT_COLUMNS = {
     "vote_status": {"label": "Vote Status", "order": 21, "list": True, "print": True, "pdf": True, "detail": True},
 }
 
+
+def _get_setting(key):
+    """Get a setting value from the database."""
+    db = SessionLocal()
+    try:
+        setting = db.query(Setting).filter(Setting.key == key).first()
+        return setting.value if setting else None
+    finally:
+        db.close()
+
+
+def _set_setting(key, value):
+    """Set a setting value in the database."""
+    db = SessionLocal()
+    try:
+        setting = db.query(Setting).filter(Setting.key == key).first()
+        if setting:
+            setting.value = value
+        else:
+            setting = Setting(key=key, value=value)
+            db.add(setting)
+        db.commit()
+    finally:
+        db.close()
+
+
 def get_column_settings():
-    if os.path.exists(SETTINGS_FILE):
-        with open(SETTINGS_FILE, 'r') as f:
-            saved = json.load(f)
+    """Get column settings from DB, merged with defaults."""
+    raw = _get_setting("column_settings")
+    if raw:
+        try:
+            saved = json.loads(raw)
             # Merge with defaults for any new columns
             for key, val in DEFAULT_COLUMNS.items():
                 if key not in saved:
                     saved[key] = val
-            # Return only column entries (dicts), skip _voting_open etc.
             return {k: v for k, v in saved.items() if isinstance(v, dict)}
+        except (json.JSONDecodeError, TypeError):
+            pass
     return DEFAULT_COLUMNS.copy()
 
+
 def save_column_settings(settings):
-    with open(SETTINGS_FILE, 'w') as f:
-        json.dump(settings, f, indent=2)
+    """Save column settings to database."""
+    _set_setting("column_settings", json.dumps(settings))
+
 
 def get_visible_columns(view_type):
-    """Get list of column keys visible for a view type (list/print/pdf/detail), ordered by 'order' field."""
+    """Get column keys visible for a view type (list/print/pdf/detail), ordered by 'order' field."""
     settings = get_column_settings()
     visible = {key: val for key, val in settings.items() if isinstance(val, dict) and val.get(view_type, False)}
     return dict(sorted(visible.items(), key=lambda x: x[1].get('order', 999)))
+
 
 def get_ordered_columns():
     """Get all columns sorted by order."""
@@ -61,19 +92,10 @@ def get_ordered_columns():
 
 def is_voting_open():
     """Check if voting is currently open."""
-    if os.path.exists(SETTINGS_FILE):
-        with open(SETTINGS_FILE, 'r') as f:
-            data = json.load(f)
-            return data.get("_voting_open", False)
-    return False
+    val = _get_setting("voting_open")
+    return val == "true"
 
 
 def set_voting_open(is_open):
     """Set voting open or closed."""
-    data = {}
-    if os.path.exists(SETTINGS_FILE):
-        with open(SETTINGS_FILE, 'r') as f:
-            data = json.load(f)
-    data["_voting_open"] = is_open
-    with open(SETTINGS_FILE, 'w') as f:
-        json.dump(data, f, indent=2)
+    _set_setting("voting_open", "true" if is_open else "false")

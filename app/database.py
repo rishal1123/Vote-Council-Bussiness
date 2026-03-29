@@ -45,5 +45,5 @@ def get_db():
 
 def init_db():
     """Initialize database tables."""
-    from app.models import user, voter, focal, candidate, box
+    from app.models import user, voter, focal, candidate, box, setting
     Base.metadata.create_all(bind=engine)
