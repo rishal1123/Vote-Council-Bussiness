@@ -200,7 +200,7 @@ async def list_voters(
     search: Optional[str] = Query(None),
     box_id: Optional[int] = Query(None),
     focal_id: Optional[int] = Query(None),
-    vote_status: Optional[VoteStatus] = Query(None),
+    vote_status: Optional[str] = Query(None),
     is_pledged: Optional[str] = Query(None),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
@@ -230,7 +230,13 @@ async def list_voters(
         query = query.join(Voter.focals).filter(Focal.id == focal_id)
 
     if vote_status:
-        query = query.filter(Voter.vote_status == vote_status)
+        if vote_status == 'voted':
+            query = query.filter(Voter.vote_status != VoteStatus.not_voted)
+        else:
+            try:
+                query = query.filter(Voter.vote_status == VoteStatus(vote_status))
+            except ValueError:
+                pass
 
     if is_pledged is not None:
         try:
@@ -249,7 +255,7 @@ async def count_voters(
     search: Optional[str] = Query(None),
     box_id: Optional[int] = Query(None),
     focal_id: Optional[int] = Query(None),
-    vote_status: Optional[VoteStatus] = Query(None),
+    vote_status: Optional[str] = Query(None),
     is_pledged: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user_required)
@@ -273,7 +279,13 @@ async def count_voters(
         query = query.join(Voter.focals).filter(Focal.id == focal_id)
 
     if vote_status:
-        query = query.filter(Voter.vote_status == vote_status)
+        if vote_status == 'voted':
+            query = query.filter(Voter.vote_status != VoteStatus.not_voted)
+        else:
+            try:
+                query = query.filter(Voter.vote_status == VoteStatus(vote_status))
+            except ValueError:
+                pass
 
     if is_pledged is not None:
         try:

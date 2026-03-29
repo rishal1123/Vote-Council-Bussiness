@@ -83,11 +83,18 @@
                 <div class="col-6 col-sm-3 col-md-2">
                     <select class="form-select" id="statusFilter" name="vote_status">
                         <option value="">All Status</option>
+                        <option value="voted">Voted (All)</option>
                         <option value="not_voted">Not Voted</option>
                         <option value="voted_pledged">Voted Pledged</option>
                         <option value="voted_other">Voted Other</option>
                         <option value="undecided">Undecided</option>
                     </select>
+                </div>
+                <div class="col-auto d-flex align-items-center">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="notVotedToggle">
+                        <label class="form-check-label small" for="notVotedToggle">Not Voted only</label>
+                    </div>
                 </div>
                 <div class="col-6 col-sm-3 col-md-2">
                     <select class="form-select" id="pledgedFilter" name="is_pledged">
@@ -269,10 +276,38 @@ async function resetColumnPrefs() {
 
 function isColVisible(col) { return visibleCols[col] ?? false; }
 
-// Load initial data
+// Not Voted toggle
+function loadNotVotedPref() {
+    const saved = localStorage.getItem('votecouncil_not_voted_default');
+    const toggle = document.getElementById('notVotedToggle');
+    if (saved === 'true') {
+        toggle.checked = true;
+        document.getElementById('statusFilter').value = 'not_voted';
+        document.getElementById('statusFilter').disabled = true;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     await loadColumnPrefs();
     await loadFilters();
+
+    // Not Voted toggle handler
+    const toggle = document.getElementById('notVotedToggle');
+    loadNotVotedPref();
+    toggle.addEventListener('change', () => {
+        localStorage.setItem('votecouncil_not_voted_default', toggle.checked);
+        const statusFilter = document.getElementById('statusFilter');
+        if (toggle.checked) {
+            statusFilter.value = 'not_voted';
+            statusFilter.disabled = true;
+        } else {
+            statusFilter.value = '';
+            statusFilter.disabled = false;
+        }
+        currentPage = 0;
+        loadVoters();
+    });
+
     applyUrlParams();
     buildTableHeader();
     loadVoters();
