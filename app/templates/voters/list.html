@@ -219,7 +219,7 @@ async function loadColumnPrefs() {
         .filter(([k,v]) => typeof v === 'object')
         .sort((a,b) => (a[1].order ?? 999) - (b[1].order ?? 999));
 
-    colOrder = entries.map(([k]) => colKeyMap[k] || k).filter(k => k !== 'photo');
+    colOrder = entries.map(([k]) => colKeyMap[k] || k);
 
     // Set defaults from admin 'list' visibility (name is always visible)
     const defaults = {};
@@ -238,17 +238,12 @@ async function loadColumnPrefs() {
     } else {
         visibleCols = defaults;
     }
-    // Name and photo always visible (cannot be disabled)
+    // Name always visible
     visibleCols['name'] = true;
-    if (!('photo' in visibleCols)) visibleCols['photo'] = true;
 
-    // Rebuild dropdown checkboxes — photo first (special), then columns in admin order
+    // Rebuild dropdown checkboxes in admin order
     const dropdown = document.getElementById('columnDropdown');
     let html = '<small class="text-muted px-1">Toggle columns</small><hr class="my-1">';
-    // Photo toggle (rendered inside Name cell, not a table column)
-    const photoChecked = visibleCols['photo'] ? 'checked' : '';
-    html += `<div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="col_photo" data-col="photo" ${photoChecked}><label class="form-check-label" for="col_photo">Photo</label></div>`;
-    html += '<hr class="my-1">';
     for (const jsKey of colOrder) {
         if (jsKey === 'name') continue; // Name always visible, not toggleable
         const adminKey = jsToAdmin[jsKey] || jsKey;
@@ -394,7 +389,7 @@ async function loadVoters() {
     }
 }
 
-const centerCols = new Set(['ec_number','voter_id','gender','age','pledged','status']);
+const centerCols = new Set(['photo','ec_number','voter_id','gender','age','pledged','status']);
 
 let sortCol = null;
 let sortDir = 'asc';
@@ -469,18 +464,13 @@ function renderVoters(voters) {
     }
 
     tbody.innerHTML = voters.map(voter => {
-        const photo = isColVisible('photo')
-            ? (voter.photo_path
-                ? `<img src="/uploads/${encodeURIComponent(voter.photo_path)}" class="voter-avatar" alt="">`
-                : `<span class="voter-avatar-ph"><i class="bi bi-person text-muted"></i></span>`)
-            : '';
-
         let row = '<tr>';
         if (isAdmin) row += `<td class="text-center"><input type="checkbox" class="form-check-input voter-checkbox" value="${voter.id}" onchange="toggleVoterSelection(${voter.id}, this.checked)"></td>`;
 
-        // All columns rendered dynamically in admin order (Name includes photo)
+        // All columns rendered dynamically in admin order
         const colRenderers = {
-            name: () => `<td><div class="d-flex align-items-center gap-2">${photo}<div><a href="/voters/${voter.id}/view">${escapeHtml(voter.name)}</a></div></div></td>`,
+            photo: () => `<td class="text-center">${voter.photo_path ? `<img src="/uploads/${encodeURIComponent(voter.photo_path)}" class="voter-avatar" alt="">` : `<span class="voter-avatar-ph"><i class="bi bi-person text-muted"></i></span>`}</td>`,
+            name: () => `<td><a href="/voters/${voter.id}/view">${escapeHtml(voter.name)}</a></td>`,
             ec_number: () => `<td${colClasses('ec_number')}>${voter.ec_number || '-'}</td>`,
             voter_id: () => `<td${colClasses('voter_id')}>${escapeHtml(voter.voter_id || '-')}</td>`,
             national_id: () => `<td${colClasses('national_id')}>${escapeHtml(voter.national_id || '-')}</td>`,
@@ -504,7 +494,6 @@ function renderVoters(voters) {
         };
 
         for (const col of colOrder) {
-            if (col === 'photo') continue; // photo is inside Name cell
             if (isColVisible(col) && colRenderers[col]) row += colRenderers[col]();
         }
 
