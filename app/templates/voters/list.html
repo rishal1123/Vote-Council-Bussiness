@@ -25,7 +25,7 @@
                 <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside">
                     <i class="bi bi-layout-three-columns"></i><span class="d-none d-md-inline"> Columns</span>
                 </button>
-                <div class="dropdown-menu dropdown-menu-end p-2" style="min-width: 220px; max-height: 400px; overflow-y: auto;" id="columnDropdown">
+                <div class="dropdown-menu dropdown-menu-end p-2" style="min-width: 220px; max-height: 420px; overflow-y: auto;" id="columnDropdown">
                     <small class="text-muted px-1">Toggle columns</small>
                     <hr class="my-1">
                     <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colPhoto" data-col="photo" checked><label class="form-check-label" for="colPhoto">Photo</label></div>
@@ -241,6 +241,7 @@ async function loadColumnPrefs() {
         const checked = visibleCols[jsKey] ? 'checked' : '';
         html += `<div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="col_${jsKey}" data-col="${jsKey}" ${checked}><label class="form-check-label" for="col_${jsKey}">${escapeHtml(label)}</label></div>`;
     }
+    html += '<hr class="my-1"><button class="btn btn-outline-secondary btn-sm w-100" onclick="resetColumnPrefs()"><i class="bi bi-arrow-counterclockwise"></i> Reset to Default</button>';
     dropdown.innerHTML = html;
 
     // Bind toggle handlers
@@ -256,6 +257,14 @@ async function loadColumnPrefs() {
 
 function saveColumnPrefs() {
     localStorage.setItem('votecouncil_voter_cols', JSON.stringify(visibleCols));
+}
+
+async function resetColumnPrefs() {
+    localStorage.removeItem('votecouncil_voter_cols');
+    await loadColumnPrefs();
+    buildTableHeader();
+    loadVoters();
+    showToast('Columns reset to default', 'success');
 }
 
 function isColVisible(col) { return visibleCols[col] ?? false; }
