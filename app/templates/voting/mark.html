@@ -342,7 +342,7 @@ function displayVoterList(voters, boxQuery) {
         const photo = v.photo_path
             ? `<img src="/uploads/${encodeURIComponent(v.photo_path)}" class="voter-list-avatar" alt="">`
             : `<div class="voter-list-avatar-placeholder"><i class="bi bi-person text-muted"></i></div>`;
-        const pledgeIcon = v.is_pledged === 'yes' ? '<i class="bi bi-star-fill text-success ms-1" title="Pledged"></i>' : '';
+        const pledgeIcon = v.is_pledged ? '<i class="bi bi-star-fill text-success ms-1" title="Pledged"></i>' : '';
         return `
             <div class="voter-list-item d-flex align-items-center gap-3" role="button" onclick="selectVoterFromList(${v.id})">
                 ${photo}
@@ -387,14 +387,13 @@ function displayVoter(voter) {
     document.getElementById('voterName').textContent = voter.name;
     document.getElementById('voterId').textContent = voter.national_id || voter.voter_id || 'N/A';
     document.getElementById('voterBox').textContent = voter.box_name || voter.box_number || 'No Box';
-    document.getElementById('voterContact').textContent = voter.contact || voter.new_contact || '';
+    document.getElementById('voterContact').textContent = voter.contact || '';
 
     document.getElementById('voterGender').textContent = voter.gender || '?';
     document.getElementById('voterAge').textContent = voter.age ? `${voter.age} yrs` : '?';
 
     const pledgedBadge = document.getElementById('voterPledged');
-    if (voter.is_pledged === 'yes') { pledgedBadge.className = 'badge bg-success'; pledgedBadge.textContent = 'Pledged'; }
-    else if (voter.is_pledged === 'undecided') { pledgedBadge.className = 'badge bg-warning text-dark'; pledgedBadge.textContent = 'Undecided'; }
+    if (voter.is_pledged) { pledgedBadge.className = 'badge bg-success'; pledgedBadge.textContent = 'Pledged'; }
     else { pledgedBadge.className = 'badge bg-secondary'; pledgedBadge.textContent = 'Not Pledged'; }
 
     const statusBadge = document.getElementById('voterCurrentStatus');
@@ -408,7 +407,7 @@ function displayVoter(voter) {
 
     // Quick pledge button
     const quickSection = document.getElementById('quickPledgedSection');
-    if (votingOpen && voter.is_pledged === 'yes' && voter.vote_status === 'not_voted' && pledgedCandidate) {
+    if (votingOpen && voter.is_pledged && voter.vote_status === 'not_voted' && pledgedCandidate) {
         quickSection.classList.remove('d-none');
     } else {
         quickSection.classList.add('d-none');
@@ -443,10 +442,11 @@ function renderCandidates() {
     let html = '';
 
     if (pledgedCandidate) {
+        const pc = pledgedCandidate.color || '#007E3A';
         html += `
             <div class="col-12">
-                <div class="candidate-card pledged-card" data-id="${pledgedCandidate.id}" data-pledged="true" onclick="selectCandidate(${pledgedCandidate.id}, true)">
-                    <span class="badge bg-success mb-1"><i class="bi bi-star-fill"></i> Our Candidate</span>
+                <div class="candidate-card pledged-card" data-id="${pledgedCandidate.id}" data-pledged="true" onclick="selectCandidate(${pledgedCandidate.id}, true)" style="border-color: ${pc};">
+                    <span class="badge mb-1" style="background: ${pc}; color: white;"><i class="bi bi-star-fill"></i> Our Candidate</span>
                     <div class="candidate-name">${escapeHtml(pledgedCandidate.name)}</div>
                     <div class="candidate-party">${escapeHtml(pledgedCandidate.party || '')} ${pledgedCandidate.number ? '#' + escapeHtml(String(pledgedCandidate.number)) : ''}</div>
                 </div>
@@ -454,9 +454,10 @@ function renderCandidates() {
     }
 
     candidates.filter(c => !c.is_pledged).forEach(c => {
+        const cc = c.color || '#D21034';
         html += `
             <div class="col-6">
-                <div class="candidate-card" data-id="${c.id}" data-pledged="false" onclick="selectCandidate(${c.id}, false)">
+                <div class="candidate-card" data-id="${c.id}" data-pledged="false" onclick="selectCandidate(${c.id}, false)" style="border-color: ${cc};">
                     <div class="candidate-name">${escapeHtml(c.name)}</div>
                     <div class="candidate-party">${escapeHtml(c.party || '')} ${c.number ? '#' + escapeHtml(String(c.number)) : ''}</div>
                 </div>

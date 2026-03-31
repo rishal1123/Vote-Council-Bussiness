@@ -67,12 +67,6 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="new_contact" class="form-label">New Contact</label>
-                            <input type="text" class="form-control" id="new_contact" name="new_contact"
-                                   value="{{ voter.new_contact if voter else '' }}">
-                        </div>
-
-                        <div class="mb-3">
                             <label for="address" class="form-label">Address</label>
                             <input type="text" class="form-control" id="address" name="address"
                                    value="{{ voter.address if voter else '' }}">
@@ -120,29 +114,16 @@
 
                         <div class="mb-3">
                             <label for="is_pledged" class="form-label"><strong>Pledge Status</strong></label>
-                            <select class="form-select" id="is_pledged" name="is_pledged">
-                                <option value="no" {{ 'selected' if not voter or voter.is_pledged.value == 'no' else '' }}>Not Pledged</option>
-                                <option value="yes" {{ 'selected' if voter and voter.is_pledged.value == 'yes' else '' }}>Pledged</option>
-                                <option value="undecided" {{ 'selected' if voter and voter.is_pledged.value == 'undecided' else '' }}>Undecided</option>
-                            </select>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="is_pledged" name="is_pledged"
+                                       {{ 'checked' if voter and voter.is_pledged else '' }}>
+                                <label class="form-check-label" for="is_pledged">Pledged</label>
+                            </div>
                         </div>
 
                         <div class="mb-3">
                             <label for="focal_comment" class="form-label">Focal Comment</label>
                             <textarea class="form-control" id="focal_comment" name="focal_comment" rows="3">{{ voter.focal_comment if voter else '' }}</textarea>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-12 col-md-6 mb-3">
-                                <label for="previous_island" class="form-label">Previous Island</label>
-                                <input type="text" class="form-control" id="previous_island" name="previous_island"
-                                       value="{{ voter.previous_island if voter else '' }}">
-                            </div>
-                            <div class="col-12 col-md-6 mb-3">
-                                <label for="previous_address" class="form-label">Previous Address</label>
-                                <input type="text" class="form-control" id="previous_address" name="previous_address"
-                                       value="{{ voter.previous_address if voter else '' }}">
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -214,15 +195,12 @@ document.getElementById('voterForm').addEventListener('submit', async (e) => {
         age: formData.get('age') ? parseInt(formData.get('age')) : null,
         party: formData.get('party') || null,
         contact: formData.get('contact') || null,
-        new_contact: formData.get('new_contact') || null,
         address: formData.get('address') || null,
         current_location: formData.get('current_location') || null,
-        previous_island: formData.get('previous_island') || null,
-        previous_address: formData.get('previous_address') || null,
         zone: formData.get('zone') || null,
         focal_comment: formData.get('focal_comment') || null,
         box_id: formData.get('box_id') ? parseInt(formData.get('box_id')) : null,
-        is_pledged: formData.get('is_pledged') || 'no',
+        is_pledged: document.getElementById('is_pledged').checked,
         focal_ids: Array.from(document.querySelectorAll('.focal-checkbox:checked')).map(cb => parseInt(cb.value))
     };
 

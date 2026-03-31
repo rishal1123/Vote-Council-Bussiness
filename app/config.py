@@ -4,7 +4,7 @@ from pathlib import Path
 
 class Settings(BaseSettings):
     APP_NAME: str = "VoteCouncil"
-    APP_VERSION: str = "1.3.1"
+    APP_VERSION: str = "2.0.0"
     DEBUG: bool = False
 
     # Database
@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     # File Upload
     UPLOAD_DIR: Path = Path("uploads")
-    MAX_UPLOAD_SIZE: int = 5 * 1024 * 1024  # 5MB
+    MAX_UPLOAD_SIZE: int = 50 * 1024 * 1024  # 50MB
     ALLOWED_EXTENSIONS: set = {"jpg", "jpeg", "png", "gif"}
 
     class Config:

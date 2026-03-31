@@ -9,7 +9,7 @@ from sqlalchemy import func, case
 
 from app.database import get_db
 from app.models import User, Voter, Box, Focal, Candidate
-from app.models.voter import VoteStatus, PledgeStatus
+from app.models.voter import VoteStatus
 from app.services.auth import get_current_user_required
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
@@ -50,8 +50,8 @@ async def get_overview_data(
         vote_status_data[status.value] = count
 
     # Pledged vs non-pledged
-    pledged_count = db.query(Voter).filter(Voter.is_pledged == PledgeStatus.yes).count()
-    non_pledged_count = db.query(Voter).filter(Voter.is_pledged != PledgeStatus.yes).count()
+    pledged_count = db.query(Voter).filter(Voter.is_pledged == True).count()
+    non_pledged_count = db.query(Voter).filter(Voter.is_pledged == False).count()
 
     # Gender breakdown
     gender_counts = db.query(
@@ -86,9 +86,6 @@ async def get_overview_data(
             ).count()
         age_data[label] = count
 
-    # Turnout by hour (if we had timestamps for vote status changes)
-    # For now, just return overall stats
-
     return {
         "vote_status": vote_status_data,
         "pledged": {
@@ -118,7 +115,7 @@ async def get_box_report(
         func.sum(case((Voter.vote_status == VoteStatus.voted_other, 1), else_=0)).label('voted_other'),
         func.sum(case((Voter.vote_status == VoteStatus.undecided, 1), else_=0)).label('undecided'),
         func.sum(case((Voter.vote_status == VoteStatus.not_voted, 1), else_=0)).label('not_voted'),
-        func.sum(case((Voter.is_pledged == PledgeStatus.yes, 1), else_=0)).label('pledged_voters'),
+        func.sum(case((Voter.is_pledged == True, 1), else_=0)).label('pledged_voters'),
     ).group_by(Voter.box_id).all()
 
     box_map = {row.box_id: row for row in rows}
@@ -157,7 +154,7 @@ async def get_focal_report(
         func.sum(case((Voter.vote_status == VoteStatus.voted_other, 1), else_=0)).label('voted_other'),
         func.sum(case((Voter.vote_status == VoteStatus.undecided, 1), else_=0)).label('undecided'),
         func.sum(case((Voter.vote_status == VoteStatus.not_voted, 1), else_=0)).label('not_voted'),
-        func.sum(case((Voter.is_pledged == PledgeStatus.yes, 1), else_=0)).label('pledged_voters'),
+        func.sum(case((Voter.is_pledged == True, 1), else_=0)).label('pledged_voters'),
     ).join(Voter, Voter.id == voter_focal.c.voter_id
     ).group_by(voter_focal.c.focal_id).all()
 
@@ -188,7 +185,7 @@ async def get_pledged_performance(
     user: User = Depends(get_current_user_required)
 ):
     """Get performance metrics for pledged voters."""
-    pledged_voters = db.query(Voter).filter(Voter.is_pledged == PledgeStatus.yes)
+    pledged_voters = db.query(Voter).filter(Voter.is_pledged == True)
     total_pledged = pledged_voters.count()
 
     if total_pledged == 0:
@@ -235,6 +232,7 @@ async def get_candidate_votes(
             "name": c.name,
             "party": c.party,
             "number": c.number,
+            "color": c.color,
             "is_pledged": c.is_pledged,
             "votes": count
         })
@@ -247,6 +245,7 @@ async def get_candidate_votes(
             "name": "Not Disclosed",
             "party": None,
             "number": None,
+            "color": "#8D99AE",
             "is_pledged": False,
             "votes": undisclosed
         })
@@ -267,8 +266,7 @@ async def export_voters_csv(
     writer = csv.writer(output)
     writer.writerow([
         "EC#", "#", "ID", "Name", "Gender", "Age", "Party",
-        "Address", "Contact", "New Contact", "Previous Island",
-        "Previous Address", "Current Location", "Box", "Box#",
+        "Address", "Contact", "Current Location", "Box", "Box#",
         "Zone", "Focal(s)", "Focal Comment", "Remarks",
         "Pledged", "Vote Status", "Voted For"
     ])
@@ -278,12 +276,11 @@ async def export_voters_csv(
         writer.writerow([
             v.ec_number or "", v.voter_id or "", v.national_id or "",
             v.name, v.gender or "", v.age or "", v.party or "",
-            v.address or "", v.contact or "", v.new_contact or "",
-            v.previous_island or "", v.previous_address or "",
+            v.address or "", v.contact or "",
             v.current_location or "",
             v.box.name if v.box else "", v.box_number or "",
             v.zone or "", focals, v.focal_comment or "", v.remarks or "",
-            v.is_pledged.value.title() if v.is_pledged else "No",
+            "Yes" if v.is_pledged else "No",
             v.vote_status.value.replace("_", " ").title(),
             v.voted_for or ""
         ])
@@ -318,7 +315,7 @@ async def export_votes_csv(
             v.ec_number or "", v.voter_id or "", v.national_id or "",
             v.name, v.gender or "", v.age or "",
             v.box.name if v.box else "", v.box_number or "",
-            v.is_pledged.value.title() if v.is_pledged else "No",
+            "Yes" if v.is_pledged else "No",
             v.vote_status.value.replace("_", " ").title(),
             v.voted_for or "", focals
         ])

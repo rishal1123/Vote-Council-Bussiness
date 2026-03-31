@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
-from app.models.voter import VoteStatus, PledgeStatus
+from app.models.voter import VoteStatus
 
 
 class VoterBase(BaseModel):
@@ -12,13 +12,10 @@ class VoterBase(BaseModel):
     party: Optional[str] = None
     address: Optional[str] = None
     contact: Optional[str] = None
-    new_contact: Optional[str] = None
-    previous_island: Optional[str] = None
-    previous_address: Optional[str] = None
     current_location: Optional[str] = None
     zone: Optional[str] = None
     focal_comment: Optional[str] = None
-    is_pledged: PledgeStatus = PledgeStatus.no
+    is_pledged: bool = False
 
 
 class VoterCreate(VoterBase):
@@ -34,13 +31,10 @@ class VoterUpdate(BaseModel):
     party: Optional[str] = None
     address: Optional[str] = None
     contact: Optional[str] = None
-    new_contact: Optional[str] = None
-    previous_island: Optional[str] = None
-    previous_address: Optional[str] = None
     current_location: Optional[str] = None
     zone: Optional[str] = None
     focal_comment: Optional[str] = None
-    is_pledged: Optional[PledgeStatus] = None
+    is_pledged: Optional[bool] = None
     box_id: Optional[int] = None
     focal_ids: Optional[List[int]] = None
 
@@ -103,9 +97,6 @@ class VoterListResponse(BaseModel):
     party: Optional[str] = None
     address: Optional[str] = None
     contact: Optional[str] = None
-    new_contact: Optional[str] = None
-    previous_island: Optional[str] = None
-    previous_address: Optional[str] = None
     current_location: Optional[str] = None
     box_number: Optional[str] = None
     zone: Optional[str] = None
@@ -113,7 +104,7 @@ class VoterListResponse(BaseModel):
     remarks: Optional[str] = None
     photo_path: Optional[str] = None
     box: Optional[BoxBrief] = None
-    is_pledged: PledgeStatus
+    is_pledged: bool
     vote_status: VoteStatus
     focals: List[FocalBrief] = []
 

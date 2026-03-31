@@ -9,12 +9,12 @@
     .rpt-stat h2 { font-size: 1.8rem; font-weight: 700; margin-bottom: 0; }
     .rpt-stat .stat-label { font-size: 0.7rem; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px; }
     .rpt-stat .stat-sub { font-size: 0.72rem; opacity: 0.7; }
-    .candidate-rank { font-size: 1.3rem; font-weight: 700; color: var(--mv-dark); min-width: 32px; }
+    .candidate-rank { font-size: 1.3rem; font-weight: 700; color: var(--mv-900); min-width: 32px; }
     .candidate-rank.first { color: var(--mv-green); }
     .candidate-bar { height: 8px; border-radius: var(--radius-pill); background: #eef0f2; overflow: hidden; }
     .candidate-bar-fill { height: 100%; border-radius: var(--radius-pill); transition: width 0.6s ease; }
     .report-section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: #8D99AE; font-weight: 600; margin-bottom: 0.75rem; }
-    .big-turnout { font-size: 3.5rem; font-weight: 800; line-height: 1; background: linear-gradient(135deg, var(--mv-green), var(--mv-lagoon)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .big-turnout { font-size: 3.5rem; font-weight: 800; line-height: 1; background: linear-gradient(135deg, var(--mv-green), var(--mv-ocean)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
     .progress-stacked { height: 8px; border-radius: var(--radius-pill); }
     @media (max-width: 576px) {
         .rpt-stat h2 { font-size: 1.3rem; }
@@ -315,7 +315,7 @@ async function loadCandidates() {
 
     container.innerHTML = data.candidates.map((c, i) => {
         const pct = data.total_voted > 0 ? (c.votes / data.total_voted * 100).toFixed(1) : 0;
-        const barColor = c.is_pledged ? '#007E3A' : c.id === 0 ? '#8D99AE' : '#D21034';
+        const barColor = c.color || (c.is_pledged ? '#007E3A' : c.id === 0 ? '#A8A29E' : '#D21034');
         const rankClass = i === 0 ? 'first' : '';
 
         return `

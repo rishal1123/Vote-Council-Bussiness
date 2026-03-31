@@ -9,7 +9,6 @@ import uuid
 from PIL import Image
 
 from app.models import Box, Focal, Voter
-from app.models.voter import PledgeStatus
 
 
 def extract_images_from_excel(file_content: bytes) -> Dict[int, str]:
@@ -101,7 +100,7 @@ def parse_excel(file_content: bytes, extract_photos: bool = False) -> Tuple[List
             if header.lower() == 'pledged':
                 pledged_col_idx = idx
 
-        # Check if row 2 is a sub-header row (Y/N/N/A under Pledged)
+        # Check if row 2 is a sub-header row (Y under Pledged)
         skip_row_2 = False
         if pledged_col_idx is not None:
             row2 = list(ws.iter_rows(min_row=2, max_row=2, values_only=True))
@@ -123,20 +122,12 @@ def parse_excel(file_content: bytes, extract_photos: bool = False) -> Tuple[List
                     header = headers[idx]
                     row_data[header] = value
 
-            # Handle Pledged sub-columns (Y / N / N/A)
+            # Handle Pledged as single column (Y = pledged, anything else = not pledged)
             if pledged_col_idx is not None:
-                pledged_y = row_values[pledged_col_idx] if pledged_col_idx < len(row_values) else None
-                pledged_n = row_values[pledged_col_idx + 1] if (pledged_col_idx + 1) < len(row_values) else None
-                pledged_na = row_values[pledged_col_idx + 2] if (pledged_col_idx + 2) < len(row_values) else None
-
-                if pledged_y and str(pledged_y).strip():
-                    row_data['_pledged_status'] = 'yes'
-                elif pledged_n and str(pledged_n).strip():
-                    row_data['_pledged_status'] = 'no'
-                elif pledged_na and str(pledged_na).strip():
-                    row_data['_pledged_status'] = 'undecided'
-                else:
-                    row_data['_pledged_status'] = 'no'
+                pledged_val = row_values[pledged_col_idx] if pledged_col_idx < len(row_values) else None
+                row_data['_is_pledged'] = bool(pledged_val and str(pledged_val).strip().upper() in ("Y", "YES", "TRUE", "1"))
+            else:
+                row_data['_is_pledged'] = False
 
             # Skip empty rows
             name = row_data.get("Name") or row_data.get("name")
@@ -199,8 +190,15 @@ def import_voters_from_excel(
             name = row.get("Name") or row.get("name")
             if not name or not str(name).strip():
                 stats["skipped"] += 1
-                stats["errors"].append(f"Row {row_num}: Name is empty, skipping row")
+                stats["errors"].append({
+                    "row": row_num,
+                    "national_id": str(row.get("ID") or row.get("id") or "").strip(),
+                    "name": "",
+                    "reason": "Name is empty"
+                })
                 continue
+
+            name_str = str(name).strip()
 
             # Validate age if present
             raw_age = row.get("Age") or row.get("age")
@@ -210,25 +208,17 @@ def import_voters_from_excel(
                     if age_val < 18 or age_val > 120:
                         stats["warnings"].append({
                             "row": row_num,
-                            "description": f"Age {age_val} is outside expected range (18-120) for voter '{str(name).strip()}'"
+                            "description": f"Age {age_val} is outside expected range (18-120) for voter '{name_str}'"
                         })
                 except (ValueError, TypeError):
                     pass
-
-            # Validate national ID not empty
-            raw_national_id = str(row.get("ID") or row.get("id") or "").strip()
-            if not raw_national_id:
-                stats["warnings"].append({
-                    "row": row_num,
-                    "description": f"National ID is empty for voter '{str(name).strip()}'"
-                })
 
             # EC # - Election Commission number
             ec_number = None
             ec_val = row.get("EC #") or row.get("EC#")
             if ec_val:
                 try:
-                    ec_number = int(ec_val)
+                    ec_number = int(str(ec_val).replace("EC", "").strip())
                 except (ValueError, TypeError):
                     pass
 
@@ -246,7 +236,7 @@ def import_voters_from_excel(
                     stats["duplicates"].append({
                         "row": row_num,
                         "national_id": national_id,
-                        "name": str(name).strip(),
+                        "name": name_str,
                         "reason": f"Duplicate in file (first seen in row {seen_national_ids[national_id]})"
                     })
                     continue
@@ -258,7 +248,7 @@ def import_voters_from_excel(
                     stats["duplicates"].append({
                         "row": row_num,
                         "national_id": national_id,
-                        "name": str(name).strip(),
+                        "name": name_str,
                         "reason": f"Already exists in database as '{existing.name}'"
                     })
                     continue
@@ -294,23 +284,8 @@ def import_voters_from_excel(
                         stats["focals_created"] += 1
                     voter_focals.append(focal_cache[focal_key])
 
-            # Determine pledged status from parsed sub-columns
-            pledge_status = PledgeStatus.no
-            pledged_raw = row.get('_pledged_status')
-            if pledged_raw:
-                if pledged_raw == 'yes':
-                    pledge_status = PledgeStatus.yes
-                elif pledged_raw == 'undecided':
-                    pledge_status = PledgeStatus.undecided
-                else:
-                    pledge_status = PledgeStatus.no
-            else:
-                # Fallback: single-column pledged field
-                pledged_val = row.get("Pledged") or row.get("pledged")
-                if pledged_val:
-                    pledged_str = str(pledged_val).upper().strip()
-                    if pledged_str in ("Y", "YES", "TRUE", "1"):
-                        pledge_status = PledgeStatus.yes
+            # Pledged status (boolean: Y = True, else False)
+            is_pledged = row.get('_is_pledged', False)
 
             # Check for photo from embedded images
             photo_path = None
@@ -325,37 +300,51 @@ def import_voters_from_excel(
             # Remarks
             remarks = str(row.get("Remarks") or row.get("remarks") or "").strip() or None
 
-            # Create voter
-            voter = Voter(
-                ec_number=ec_number,
-                voter_id=voter_id,
-                national_id=national_id,
-                name=str(name).strip(),
-                gender=str(row.get("G") or row.get("Gender") or row.get("gender") or "").strip() or None,
-                age=int(row.get("Age") or row.get("age") or 0) if row.get("Age") or row.get("age") else None,
-                party=str(row.get("P") or row.get("Party") or row.get("party") or "").strip() or None,
-                address=str(row.get("Address") or row.get("address") or "").strip() or None,
-                contact=str(row.get("Contact") or row.get("contact") or "").strip() or None,
-                new_contact=str(row.get("New Contact") or "").strip() or None,
-                previous_island=str(row.get("Previous Island") or "").strip() or None,
-                previous_address=str(row.get("Previous address") or "").strip() or None,
-                current_location=str(row.get("Current Location") or "").strip() or None,
-                box_number=box_number,
-                zone=str(row.get("Zone") or row.get("zone") or "").strip() or None,
-                focal_comment=str(row.get("Focal Comment") or "").strip() or None,
-                remarks=remarks,
-                box=box,
-                is_pledged=pledge_status,
-                focals=voter_focals,
-                photo_path=photo_path
-            )
+            # Create voter using savepoint so errors skip only this row
+            sp = db.begin_nested()
+            try:
+                voter = Voter(
+                    ec_number=ec_number,
+                    voter_id=voter_id,
+                    national_id=national_id,
+                    name=name_str,
+                    gender=str(row.get("G") or row.get("Gender") or row.get("gender") or "").strip() or None,
+                    age=int(row.get("Age") or row.get("age") or 0) if row.get("Age") or row.get("age") else None,
+                    party=str(row.get("P") or row.get("Party") or row.get("party") or "").strip() or None,
+                    address=str(row.get("Address") or row.get("address") or "").strip() or None,
+                    contact=str(row.get("Contact") or row.get("contact") or "").strip() or None,
+                    current_location=str(row.get("Current Location") or "").strip() or None,
+                    box_number=box_number,
+                    zone=str(row.get("Zone") or row.get("zone") or "").strip() or None,
+                    focal_comment=str(row.get("Focal Comment") or "").strip() or None,
+                    remarks=remarks,
+                    box=box,
+                    is_pledged=is_pledged,
+                    focals=voter_focals,
+                    photo_path=photo_path
+                )
 
-            db.add(voter)
-            stats["imported"] += 1
+                db.add(voter)
+                db.flush()
+                stats["imported"] += 1
+            except Exception as row_err:
+                sp.rollback()
+                stats["skipped"] += 1
+                stats["errors"].append({
+                    "row": row_num,
+                    "national_id": national_id or "",
+                    "name": name_str,
+                    "reason": str(row_err)
+                })
 
         except Exception as e:
-            stats["errors"].append(f"Row {row_num}: {str(e)}")
             stats["skipped"] += 1
+            stats["errors"].append({
+                "row": row_num,
+                "national_id": str(row.get("ID") or row.get("id") or "").strip(),
+                "name": str(row.get("Name") or row.get("name") or "").strip(),
+                "reason": str(e)
+            })
 
     db.commit()
     return stats

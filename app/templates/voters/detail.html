@@ -40,8 +40,8 @@
                         </div>
                         {% if 'pledged' in visible %}
                         <div class="col-md-6 text-md-end">
-                            <span class="badge rounded-pill {% if voter.is_pledged.value == 'yes' %}bg-success{% elif voter.is_pledged.value == 'undecided' %}bg-warning{% else %}bg-secondary{% endif %} fs-6">
-                                {% if voter.is_pledged.value == 'yes' %}Pledged{% elif voter.is_pledged.value == 'undecided' %}Undecided{% else %}Not Pledged{% endif %}
+                            <span class="badge rounded-pill {% if voter.is_pledged %}bg-success{% else %}bg-secondary{% endif %} fs-6">
+                                {% if voter.is_pledged %}Pledged{% else %}Not Pledged{% endif %}
                             </span>
                         </div>
                         {% endif %}
@@ -58,23 +58,12 @@
                         </div>
                         <div class="col-md-6">
                             {% if 'contact' in visible %}<p><strong>Contact:</strong> {{ voter.contact or '-' }}</p>{% endif %}
-                            {% if 'new_contact' in visible %}<p><strong>New Contact:</strong> {{ voter.new_contact or '-' }}</p>{% endif %}
                             {% if 'address' in visible %}<p><strong>Address:</strong> {{ voter.address or '-' }}</p>{% endif %}
+                            {% if 'current_location' in visible and voter.current_location %}
+                            <p><strong>Current Location:</strong> {{ voter.current_location }}</p>
+                            {% endif %}
                         </div>
                     </div>
-
-                    {% if ('previous_island' in visible or 'previous_address' in visible or 'current_location' in visible) and (voter.previous_island or voter.previous_address or voter.current_location) %}
-                    <hr>
-                    <div class="row">
-                        <div class="col-md-6">
-                            {% if 'previous_island' in visible %}<p><strong>Previous Island:</strong> {{ voter.previous_island or '-' }}</p>{% endif %}
-                            {% if 'previous_address' in visible %}<p><strong>Previous Address:</strong> {{ voter.previous_address or '-' }}</p>{% endif %}
-                        </div>
-                        <div class="col-md-6">
-                            {% if 'current_location' in visible %}<p><strong>Current Location:</strong> {{ voter.current_location or '-' }}</p>{% endif %}
-                        </div>
-                    </div>
-                    {% endif %}
 
                     {% if 'focals' in visible and voter.focals %}
                     <hr>

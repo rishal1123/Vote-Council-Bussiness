@@ -10,4 +10,5 @@ class Candidate(Base):
     name = Column(String(100), nullable=False, index=True)
     party = Column(String(100), nullable=True)
     number = Column(Integer, nullable=True)
+    color = Column(String(7), nullable=True)  # Hex color e.g. "#FF5733"
     is_pledged = Column(Boolean, default=False)  # Is this our pledged candidate

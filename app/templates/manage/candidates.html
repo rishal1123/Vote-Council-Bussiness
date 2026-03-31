@@ -2,6 +2,15 @@
 
 {% block title %}Candidates - VoteCouncil{% endblock %}
 
+{% block extra_css %}
+<style>
+    .color-dot { width: 20px; height: 20px; border-radius: 50%; display: inline-block; border: 2px solid rgba(0,0,0,0.1); }
+    .color-picker-wrap { display: flex; align-items: center; gap: 10px; }
+    .color-picker-wrap input[type="color"] { width: 48px; height: 38px; padding: 2px; border: 1px solid #dee2e6; border-radius: var(--radius-sm); cursor: pointer; }
+    .color-picker-wrap input[type="text"] { width: 90px; font-family: monospace; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container">
     <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-3 gap-2 page-header">
@@ -23,6 +32,7 @@
                     <thead class="table-light">
                         <tr>
                             <th>Number</th>
+                            <th>Color</th>
                             <th>Name</th>
                             <th class="d-none d-md-table-cell">Party</th>
                             <th class="text-center">Pledged</th>
@@ -33,7 +43,7 @@
                     </thead>
                     <tbody id="candidateList">
                         <tr>
-                            <td colspan="5" class="text-center py-5">
+                            <td colspan="6" class="text-center py-5">
                                 <div class="spinner-border text-primary" role="status"></div>
                             </td>
                         </tr>
@@ -64,9 +74,18 @@
                         <label for="candidateParty" class="form-label">Party</label>
                         <input type="text" class="form-control" id="candidateParty">
                     </div>
-                    <div class="mb-3">
-                        <label for="candidateNumber" class="form-label">Number</label>
-                        <input type="number" class="form-control" id="candidateNumber">
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label for="candidateNumber" class="form-label">Number</label>
+                            <input type="number" class="form-control" id="candidateNumber">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Color</label>
+                            <div class="color-picker-wrap">
+                                <input type="color" id="candidateColorPicker" value="#0077B6" onchange="document.getElementById('candidateColorHex').value = this.value">
+                                <input type="text" class="form-control" id="candidateColorHex" value="#0077B6" maxlength="7" placeholder="#000000" onchange="document.getElementById('candidateColorPicker').value = this.value">
+                            </div>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <div class="form-check">
@@ -109,15 +128,16 @@ function renderCandidates() {
     const isAdmin = {{ 'true' if user.role.value == 'admin' else 'false' }};
 
     if (candidates.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${isAdmin ? 5 : 4}" class="text-center py-5">No candidates found</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${isAdmin ? 6 : 5}" class="text-center py-5">No candidates found</td></tr>`;
         return;
     }
 
     tbody.innerHTML = candidates.map(c => `
         <tr class="${c.is_pledged ? 'table-success' : ''}">
             <td><strong>${c.number || '-'}</strong></td>
-            <td>${c.name}</td>
-            <td class="d-none d-md-table-cell">${c.party || '-'}</td>
+            <td><span class="color-dot" style="background: ${c.color || '#ccc'}"></span></td>
+            <td>${escapeHtml(c.name)}</td>
+            <td class="d-none d-md-table-cell">${escapeHtml(c.party || '-')}</td>
             <td class="text-center">
                 ${c.is_pledged ? '<i class="bi bi-star-fill text-warning"></i> Pledged' : '-'}
             </td>
@@ -142,6 +162,8 @@ function showAddModal() {
     document.getElementById('candidateName').value = '';
     document.getElementById('candidateParty').value = '';
     document.getElementById('candidateNumber').value = '';
+    document.getElementById('candidateColorPicker').value = '#0077B6';
+    document.getElementById('candidateColorHex').value = '#0077B6';
     document.getElementById('candidatePledged').checked = false;
     modal.show();
 }
@@ -153,6 +175,8 @@ function showEditModal(id) {
     document.getElementById('candidateName').value = c.name;
     document.getElementById('candidateParty').value = c.party || '';
     document.getElementById('candidateNumber').value = c.number || '';
+    document.getElementById('candidateColorPicker').value = c.color || '#0077B6';
+    document.getElementById('candidateColorHex').value = c.color || '#0077B6';
     document.getElementById('candidatePledged').checked = c.is_pledged;
     modal.show();
 }
@@ -163,6 +187,7 @@ async function saveCandidate() {
         name: document.getElementById('candidateName').value,
         party: document.getElementById('candidateParty').value || null,
         number: document.getElementById('candidateNumber').value ? parseInt(document.getElementById('candidateNumber').value) : null,
+        color: document.getElementById('candidateColorHex').value || null,
         is_pledged: document.getElementById('candidatePledged').checked
     };
 

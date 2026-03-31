@@ -107,6 +107,15 @@ app.include_router(reports.router)
 app.include_router(voting.router)
 
 
+# Inject app_version into all Jinja2 template environments for cache-busting
+from jinja2 import Environment
+_original_get_template = Environment.get_template
+def _patched_get_template(self, name, *args, **kwargs):
+    self.globals['app_version'] = settings.APP_VERSION
+    return _original_get_template(self, name, *args, **kwargs)
+Environment.get_template = _patched_get_template
+
+
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     """Serve favicon."""

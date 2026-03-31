@@ -6,6 +6,7 @@ class CandidateBase(BaseModel):
     name: str
     party: Optional[str] = None
     number: Optional[int] = None
+    color: Optional[str] = None
     is_pledged: bool = False
 
 
@@ -17,6 +18,7 @@ class CandidateUpdate(BaseModel):
     name: Optional[str] = None
     party: Optional[str] = None
     number: Optional[int] = None
+    color: Optional[str] = None
     is_pledged: Optional[bool] = None
 
 

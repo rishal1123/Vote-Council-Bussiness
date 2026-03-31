@@ -173,9 +173,6 @@
                 {% if 'box_number' in visible %}<th>Box#</th>{% endif %}
                 {% if 'zone' in visible %}<th>Zone</th>{% endif %}
                 {% if 'contact' in visible %}<th>Contact</th>{% endif %}
-                {% if 'new_contact' in visible %}<th>New Contact</th>{% endif %}
-                {% if 'previous_island' in visible %}<th>Previous Island</th>{% endif %}
-                {% if 'previous_address' in visible %}<th>Previous Address</th>{% endif %}
                 {% if 'current_location' in visible %}<th>Current Location</th>{% endif %}
                 {% if 'focals' in visible %}<th>Focal(s)</th>{% endif %}
                 {% if 'focal_comment' in visible %}<th>Focal Comment</th>{% endif %}
@@ -213,9 +210,6 @@
                 {% if 'box_number' in visible %}<td>{{ voter.box_number or '-' }}</td>{% endif %}
                 {% if 'zone' in visible %}<td>{{ voter.zone or '-' }}</td>{% endif %}
                 {% if 'contact' in visible %}<td>{{ voter.contact or '-' }}</td>{% endif %}
-                {% if 'new_contact' in visible %}<td>{{ voter.new_contact or '-' }}</td>{% endif %}
-                {% if 'previous_island' in visible %}<td>{{ voter.previous_island or '-' }}</td>{% endif %}
-                {% if 'previous_address' in visible %}<td>{{ voter.previous_address or '-' }}</td>{% endif %}
                 {% if 'current_location' in visible %}<td>{{ voter.current_location or '-' }}</td>{% endif %}
                 {% if 'focals' in visible %}
                 <td>
@@ -227,10 +221,8 @@
                 {% if 'remarks' in visible %}<td>{{ voter.remarks or '-' }}</td>{% endif %}
                 {% if 'pledged' in visible %}
                 <td style="text-align:center">
-                    {% if voter.is_pledged.value == 'yes' %}
+                    {% if voter.is_pledged %}
                     <span class="pledged-yes">Yes</span>
-                    {% elif voter.is_pledged.value == 'undecided' %}
-                    <span class="pledged-undecided">N/A</span>
                     {% else %}
                     <span class="pledged-no">No</span>
                     {% endif %}

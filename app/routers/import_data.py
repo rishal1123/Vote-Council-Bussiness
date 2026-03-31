@@ -69,8 +69,7 @@ async def export_current_data(
 
     headers = [
         "EC#", "#", "ID", "Name", "Gender", "Age", "Party",
-        "Address", "Contact", "New Contact", "Previous Island",
-        "Previous Address", "Current Location", "Registered Box", "Box#",
+        "Address", "Contact", "Current Location", "Registered Box", "Box#",
         "Zone", "Focal", "Focal Comment", "Remarks", "Pledged", "Vote Status"
     ]
 
@@ -82,14 +81,13 @@ async def export_current_data(
 
     for row, v in enumerate(voters, 2):
         focals = ", ".join(f.name for f in v.focals) if v.focals else ""
-        pledge = v.is_pledged.value.title() if v.is_pledged else "No"
+        pledge = "Yes" if v.is_pledged else "No"
         status = v.vote_status.value.replace("_", " ").title() if v.vote_status else ""
 
         values = [
             v.ec_number, v.voter_id, v.national_id, v.name,
             v.gender, v.age, v.party, v.address,
-            v.contact, v.new_contact, v.previous_island,
-            v.previous_address, v.current_location,
+            v.contact, v.current_location,
             v.box.name if v.box else "", v.box_number,
             v.zone, focals, v.focal_comment, v.remarks,
             pledge, status

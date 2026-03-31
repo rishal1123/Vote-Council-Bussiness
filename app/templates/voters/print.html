@@ -124,9 +124,6 @@
                 {% if 'party' in visible %}<th>Party</th>{% endif %}
                 {% if 'address' in visible %}<th>Address</th>{% endif %}
                 {% if 'contact' in visible %}<th>Contact</th>{% endif %}
-                {% if 'new_contact' in visible %}<th>New Contact</th>{% endif %}
-                {% if 'previous_island' in visible %}<th>Previous Island</th>{% endif %}
-                {% if 'previous_address' in visible %}<th>Previous Address</th>{% endif %}
                 {% if 'current_location' in visible %}<th>Current Location</th>{% endif %}
                 {% if 'box' in visible %}<th>Box</th>{% endif %}
                 {% if 'box_number' in visible %}<th>Box#</th>{% endif %}
@@ -151,9 +148,6 @@
                 {% if 'party' in visible %}<td>{{ voter.party or '-' }}</td>{% endif %}
                 {% if 'address' in visible %}<td>{{ voter.address or '-' }}</td>{% endif %}
                 {% if 'contact' in visible %}<td>{{ voter.contact or '-' }}</td>{% endif %}
-                {% if 'new_contact' in visible %}<td>{{ voter.new_contact or '-' }}</td>{% endif %}
-                {% if 'previous_island' in visible %}<td>{{ voter.previous_island or '-' }}</td>{% endif %}
-                {% if 'previous_address' in visible %}<td>{{ voter.previous_address or '-' }}</td>{% endif %}
                 {% if 'current_location' in visible %}<td>{{ voter.current_location or '-' }}</td>{% endif %}
                 {% if 'box' in visible %}<td>{{ voter.box.name if voter.box else '-' }}</td>{% endif %}
                 {% if 'box_number' in visible %}<td>{{ voter.box_number or '-' }}</td>{% endif %}
@@ -163,9 +157,7 @@
                 {% if 'remarks' in visible %}<td>{{ voter.remarks or '-' }}</td>{% endif %}
                 {% if 'pledged' in visible %}
                 <td class="text-center">
-                    {% if voter.is_pledged and voter.is_pledged.value == 'yes' %}Yes
-                    {% elif voter.is_pledged and voter.is_pledged.value == 'undecided' %}?
-                    {% else %}No{% endif %}
+                    {% if voter.is_pledged %}Yes{% else %}No{% endif %}
                 </td>
                 {% endif %}
                 {% if 'vote_status' in visible %}

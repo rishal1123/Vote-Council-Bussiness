@@ -61,11 +61,10 @@ async def search_voters_by_box(
             "gender": v.gender,
             "age": v.age,
             "photo_path": v.photo_path,
-            "is_pledged": v.is_pledged.value if v.is_pledged else "no",
+            "is_pledged": v.is_pledged,
             "vote_status": v.vote_status.value,
             "voted_for": v.voted_for,
             "contact": v.contact,
-            "new_contact": v.new_contact,
             "box_name": v.box.name if v.box else None,
             "box_number": v.box_number
         }
@@ -98,11 +97,10 @@ async def search_voters_by_national_id(
             "gender": v.gender,
             "age": v.age,
             "photo_path": v.photo_path,
-            "is_pledged": v.is_pledged.value if v.is_pledged else "no",
+            "is_pledged": v.is_pledged,
             "vote_status": v.vote_status.value,
             "voted_for": v.voted_for,
             "contact": v.contact,
-            "new_contact": v.new_contact,
             "box_name": v.box.name if v.box else None,
             "box_number": v.box_number
         }

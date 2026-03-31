@@ -37,9 +37,6 @@
                     <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colParty" data-col="party"><label class="form-check-label" for="colParty">Party</label></div>
                     <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colAddress" data-col="address"><label class="form-check-label" for="colAddress">Address</label></div>
                     <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colContact" data-col="contact" checked><label class="form-check-label" for="colContact">Contact</label></div>
-                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colNewContact" data-col="new_contact"><label class="form-check-label" for="colNewContact">New Contact</label></div>
-                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colPrevIsland" data-col="prev_island"><label class="form-check-label" for="colPrevIsland">Previous Island</label></div>
-                    <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colPrevAddress" data-col="prev_address"><label class="form-check-label" for="colPrevAddress">Previous Address</label></div>
                     <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colCurLocation" data-col="cur_location"><label class="form-check-label" for="colCurLocation">Current Location</label></div>
                     <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colBox" data-col="box" checked><label class="form-check-label" for="colBox">Registered Box</label></div>
                     <div class="form-check"><input class="form-check-input col-toggle" type="checkbox" id="colBoxNum" data-col="box_number"><label class="form-check-label" for="colBoxNum">Box #</label></div>
@@ -99,9 +96,8 @@
                 <div class="col-6 col-sm-3 col-md-2">
                     <select class="form-select" id="pledgedFilter" name="is_pledged">
                         <option value="">All Voters</option>
-                        <option value="yes">Pledged</option>
-                        <option value="no">Not Pledged</option>
-                        <option value="undecided">Undecided</option>
+                        <option value="true">Pledged</option>
+                        <option value="false">Not Pledged</option>
                     </select>
                 </div>
             </form>
@@ -146,13 +142,10 @@
             <i class="bi bi-check2-square"></i> <span id="selectedCount">0</span> voter(s) selected
         </span>
         <div class="d-flex flex-wrap gap-2">
-            <button class="btn btn-success btn-sm" onclick="bulkUpdatePledge('yes')">
+            <button class="btn btn-success btn-sm" onclick="bulkUpdatePledge(true)">
                 <i class="bi bi-check-circle"></i> Pledged
             </button>
-            <button class="btn btn-warning btn-sm" onclick="bulkUpdatePledge('undecided')">
-                <i class="bi bi-question-circle"></i> Undecided
-            </button>
-            <button class="btn btn-secondary btn-sm" onclick="bulkUpdatePledge('no')">
+            <button class="btn btn-secondary btn-sm" onclick="bulkUpdatePledge(false)">
                 <i class="bi bi-dash-circle"></i> Not Pledged
             </button>
         </div>
@@ -171,13 +164,10 @@
                 <p>Voter: <strong id="pledgeVoterName"></strong></p>
                 <input type="hidden" id="pledgeVoterId">
                 <div class="d-grid gap-2">
-                    <button class="btn btn-success btn-lg" onclick="updatePledge('yes')">
+                    <button class="btn btn-success btn-lg" onclick="updatePledge(true)">
                         <i class="bi bi-check-circle"></i> Pledged
                     </button>
-                    <button class="btn btn-warning btn-lg" onclick="updatePledge('undecided')">
-                        <i class="bi bi-question-circle"></i> Undecided
-                    </button>
-                    <button class="btn btn-secondary btn-lg" onclick="updatePledge('no')">
+                    <button class="btn btn-secondary btn-lg" onclick="updatePledge(false)">
                         <i class="bi bi-dash-circle"></i> Not Pledged
                     </button>
                 </div>
@@ -202,7 +192,7 @@ let visibleCols = {};
 let colOrder = []; // ordered column keys from admin
 
 // Map admin setting keys to JS column keys
-const colKeyMap = {photo:'photo', ec_number:'ec_number', voter_id:'voter_id', national_id:'national_id', name:'name', gender:'gender', age:'age', party:'party', address:'address', contact:'contact', new_contact:'new_contact', previous_island:'prev_island', previous_address:'prev_address', current_location:'cur_location', box:'box', box_number:'box_number', zone:'zone', focals:'focals', focal_comment:'focal_comment', remarks:'remarks', pledged:'pledged', vote_status:'status'};
+const colKeyMap = {photo:'photo', ec_number:'ec_number', voter_id:'voter_id', national_id:'national_id', name:'name', gender:'gender', age:'age', party:'party', address:'address', contact:'contact', current_location:'cur_location', box:'box', box_number:'box_number', zone:'zone', focals:'focals', focal_comment:'focal_comment', remarks:'remarks', pledged:'pledged', vote_status:'status'};
 const jsToAdmin = Object.fromEntries(Object.entries(colKeyMap).map(([k,v]) => [v,k]));
 
 async function loadColumnPrefs() {
@@ -479,9 +469,6 @@ function renderVoters(voters) {
             party: () => `<td${colClasses('party')}>${escapeHtml(voter.party || '-')}</td>`,
             address: () => `<td${colClasses('address')}><small>${escapeHtml(voter.address || '-')}</small></td>`,
             contact: () => `<td${colClasses('contact')}>${escapeHtml(voter.contact || '') || '-'}</td>`,
-            new_contact: () => `<td${colClasses('new_contact')}>${escapeHtml(voter.new_contact || '') || '-'}</td>`,
-            prev_island: () => `<td${colClasses('prev_island')}>${escapeHtml(voter.previous_island || '-')}</td>`,
-            prev_address: () => `<td${colClasses('prev_address')}><small>${escapeHtml(voter.previous_address || '-')}</small></td>`,
             cur_location: () => `<td${colClasses('cur_location')}>${escapeHtml(voter.current_location || '-')}</td>`,
             box: () => `<td${colClasses('box')}>${voter.box ? escapeHtml(voter.box.name) : '-'}</td>`,
             box_number: () => `<td${colClasses('box_number')}>${escapeHtml(voter.box_number || '-')}</td>`,
@@ -489,7 +476,7 @@ function renderVoters(voters) {
             focals: () => `<td${colClasses('focals')}>${voter.focals.map(f => '<span class="badge bg-light text-dark">' + escapeHtml(f.name) + '</span>').join(' ')}</td>`,
             focal_comment: () => `<td${colClasses('focal_comment')}><small>${escapeHtml(voter.focal_comment || '-')}</small></td>`,
             remarks: () => `<td${colClasses('remarks')}><small>${escapeHtml(voter.remarks || '-')}</small></td>`,
-            pledged: () => `<td${colClasses('pledged')}>${voter.is_pledged === 'yes' ? '<i class="bi bi-check-circle-fill text-success"></i>' : voter.is_pledged === 'undecided' ? '<i class="bi bi-question-circle-fill text-warning"></i>' : '<i class="bi bi-dash text-muted"></i>'}</td>`,
+            pledged: () => `<td${colClasses('pledged')}>${voter.is_pledged ? '<i class="bi bi-check-circle-fill text-success"></i>' : '<i class="bi bi-dash text-muted"></i>'}</td>`,
             status: () => `<td${colClasses('status')}>${getStatusBadge(voter.vote_status)}</td>`
         };
 
@@ -584,14 +571,14 @@ function openPledgeModal(voterId, voterName) {
     new bootstrap.Modal(document.getElementById('pledgeModal')).show();
 }
 
-async function updatePledge(pledgeStatus) {
+async function updatePledge(isPledged) {
     const voterId = document.getElementById('pledgeVoterId').value;
 
     try {
         const response = await fetch(`/voters/${voterId}/pledge`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ is_pledged: pledgeStatus })
+            body: JSON.stringify({ is_pledged: isPledged })
         });
 
         if (response.ok) {
@@ -660,7 +647,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-async function bulkUpdatePledge(pledgeStatus) {
+async function bulkUpdatePledge(isPledged) {
     if (selectedVoterIds.size === 0) return;
 
     const voterIds = Array.from(selectedVoterIds);
@@ -670,7 +657,7 @@ async function bulkUpdatePledge(pledgeStatus) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 voter_ids: voterIds,
-                is_pledged: pledgeStatus
+                is_pledged: isPledged
             })
         });
 

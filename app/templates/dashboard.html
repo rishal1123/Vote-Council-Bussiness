@@ -173,11 +173,11 @@
             <div class="row g-2" id="candidateVotes">
                 {% for c in stats.candidate_stats %}
                 <div class="col-6 col-md-3">
-                    <div class="card candidate-vote-card h-100 {% if c.is_pledged %}border-success{% elif c.id == 0 %}border-secondary{% endif %}">
+                    <div class="card candidate-vote-card h-100" style="border-top: 3px solid {{ c.color or ('#007E3A' if c.is_pledged else '#A8A29E') }};">
                         <div class="card-body py-3">
                             {% if c.is_pledged %}<span class="badge bg-success mb-1"><i class="bi bi-star-fill"></i> Ours</span>{% endif %}
                             {% if c.id == 0 %}<span class="badge bg-secondary mb-1">Unknown</span>{% endif %}
-                            <h3 class="mb-1 {% if c.is_pledged %}text-success{% elif c.id == 0 %}text-secondary{% endif %}">{{ c.votes }}</h3>
+                            <h3 class="mb-1" style="color: {{ c.color or ('#007E3A' if c.is_pledged else '#78716C') }};">{{ c.votes }}</h3>
                             <div class="fw-semibold small">{{ c.name }}</div>
                             <small class="text-muted">{{ c.party or '' }} {% if c.number %}#{{ c.number }}{% endif %}</small>
                         </div>

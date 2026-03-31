@@ -10,7 +10,7 @@ from typing import List, Optional
 
 from app.database import get_db
 from app.models import Voter, Box, Focal, User
-from app.models.voter import VoteStatus, PledgeStatus
+from app.models.voter import VoteStatus
 from app.models.user import UserRole
 from app.schemas.voter import (
     VoterCreate, VoterUpdate, VoterResponse, VoterListResponse, VoterStatusUpdate,
@@ -68,10 +68,10 @@ async def voters_print_page(
     if vote_status:
         query = query.filter(Voter.vote_status == vote_status)
     if is_pledged is not None:
-        try:
-            query = query.filter(Voter.is_pledged == PledgeStatus(is_pledged))
-        except ValueError:
-            pass
+        if is_pledged in ('true', 'yes', '1'):
+            query = query.filter(Voter.is_pledged == True)
+        elif is_pledged in ('false', 'no', '0'):
+            query = query.filter(Voter.is_pledged == False)
 
     voters = query.order_by(Voter.name).all()
 
@@ -128,10 +128,10 @@ async def voters_export_pdf(
     if vote_status:
         query = query.filter(Voter.vote_status == vote_status)
     if is_pledged is not None:
-        try:
-            query = query.filter(Voter.is_pledged == PledgeStatus(is_pledged))
-        except ValueError:
-            pass
+        if is_pledged in ('true', 'yes', '1'):
+            query = query.filter(Voter.is_pledged == True)
+        elif is_pledged in ('false', 'no', '0'):
+            query = query.filter(Voter.is_pledged == False)
 
     voters = query.order_by(Voter.name).all()
 
@@ -242,10 +242,10 @@ async def list_voters(
                 pass
 
     if is_pledged is not None:
-        try:
-            query = query.filter(Voter.is_pledged == PledgeStatus(is_pledged))
-        except ValueError:
-            pass
+        if is_pledged in ('true', 'yes', '1'):
+            query = query.filter(Voter.is_pledged == True)
+        elif is_pledged in ('false', 'no', '0'):
+            query = query.filter(Voter.is_pledged == False)
 
     # Sorting
     sort_map = {
@@ -300,10 +300,10 @@ async def count_voters(
                 pass
 
     if is_pledged is not None:
-        try:
-            query = query.filter(Voter.is_pledged == PledgeStatus(is_pledged))
-        except ValueError:
-            pass
+        if is_pledged in ('true', 'yes', '1'):
+            query = query.filter(Voter.is_pledged == True)
+        elif is_pledged in ('false', 'no', '0'):
+            query = query.filter(Voter.is_pledged == False)
 
     return {"count": query.count()}
 
@@ -343,10 +343,10 @@ async def export_voters_csv(
         query = query.filter(Voter.vote_status == vote_status)
 
     if is_pledged is not None:
-        try:
-            query = query.filter(Voter.is_pledged == PledgeStatus(is_pledged))
-        except ValueError:
-            pass
+        if is_pledged in ('true', 'yes', '1'):
+            query = query.filter(Voter.is_pledged == True)
+        elif is_pledged in ('false', 'no', '0'):
+            query = query.filter(Voter.is_pledged == False)
 
     voters = query.order_by(Voter.name).all()
 
@@ -354,8 +354,7 @@ async def export_voters_csv(
     writer = csv.writer(output)
     writer.writerow([
         "EC#", "#", "ID", "Name", "Gender", "Age", "Party",
-        "Address", "Contact", "New Contact", "Previous Island",
-        "Previous Address", "Current Location", "Box", "Box#",
+        "Address", "Contact", "Current Location", "Box", "Box#",
         "Zone", "Focal(s)", "Focal Comment", "Remarks",
         "Pledged", "Vote Status", "Voted For", "Voted At"
     ])
@@ -365,12 +364,11 @@ async def export_voters_csv(
         writer.writerow([
             v.ec_number or "", v.voter_id or "", v.national_id or "",
             v.name, v.gender or "", v.age or "", v.party or "",
-            v.address or "", v.contact or "", v.new_contact or "",
-            v.previous_island or "", v.previous_address or "",
+            v.address or "", v.contact or "",
             v.current_location or "",
             v.box.name if v.box else "", v.box_number or "",
             v.zone or "", focals, v.focal_comment or "", v.remarks or "",
-            v.is_pledged.value.title() if v.is_pledged else "No",
+            "Yes" if v.is_pledged else "No",
             v.vote_status.value.replace("_", " ").title(),
             v.voted_for or "",
             v.voted_at.strftime("%Y-%m-%d %H:%M:%S") if v.voted_at else ""
@@ -408,9 +406,6 @@ async def get_voter(
         party=voter.party,
         address=voter.address,
         contact=voter.contact,
-        new_contact=voter.new_contact,
-        previous_island=voter.previous_island,
-        previous_address=voter.previous_address,
         current_location=voter.current_location,
         zone=voter.zone,
         focal_comment=voter.focal_comment,
@@ -435,12 +430,6 @@ async def create_voter(
     user: User = Depends(require_role(UserRole.admin, UserRole.operator))
 ):
     """Create a new voter."""
-    # Check for duplicate voter_id
-    if voter_data.voter_id:
-        existing = db.query(Voter).filter(Voter.voter_id == voter_data.voter_id).first()
-        if existing:
-            raise HTTPException(status_code=400, detail="Voter ID already exists")
-
     # Get focals
     focals = []
     if voter_data.focal_ids:
@@ -594,12 +583,12 @@ from pydantic import BaseModel as PydanticBaseModel
 
 
 class PledgeUpdate(PydanticBaseModel):
-    is_pledged: str
+    is_pledged: bool
 
 
 class BulkPledgeUpdate(PydanticBaseModel):
     voter_ids: List[int]
-    is_pledged: str
+    is_pledged: bool
 
 
 @router.patch("/{voter_id}/pledge")
@@ -615,17 +604,15 @@ async def update_pledge_status(
     if not voter:
         raise HTTPException(status_code=404, detail="Voter not found")
 
-    old_pledge = voter.is_pledged.value if voter.is_pledged else "none"
-    try:
-        voter.is_pledged = PledgeStatus(data.is_pledged)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid pledge status")
+    old_pledge = "Yes" if voter.is_pledged else "No"
+    voter.is_pledged = data.is_pledged
 
     db.commit()
 
-    log_activity(db, "pledge_update", user=user, details=f"Updated pledge for {voter.name}: {old_pledge} -> {data.is_pledged}", entity_type="Voter", entity_id=voter.id, ip_address=request.client.host if request.client else None)
+    new_pledge = "Yes" if data.is_pledged else "No"
+    log_activity(db, "pledge_update", user=user, details=f"Updated pledge for {voter.name}: {old_pledge} -> {new_pledge}", entity_type="Voter", entity_id=voter.id, ip_address=request.client.host if request.client else None)
 
-    return {"message": "Pledge status updated", "is_pledged": voter.is_pledged.value}
+    return {"message": "Pledge status updated", "is_pledged": voter.is_pledged}
 
 
 @router.post("/bulk-pledge")
@@ -636,18 +623,14 @@ async def bulk_update_pledge(
     user: User = Depends(require_role(UserRole.admin))
 ):
     """Bulk update pledge status for multiple voters (admin only)."""
-    try:
-        pledge_status = PledgeStatus(data.is_pledged)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid pledge status")
-
     voters = db.query(Voter).filter(Voter.id.in_(data.voter_ids)).all()
     for voter in voters:
-        voter.is_pledged = pledge_status
+        voter.is_pledged = data.is_pledged
 
     db.commit()
 
-    log_activity(db, "bulk_pledge_update", user=user, details=f"Bulk pledge update to '{data.is_pledged}' for {len(voters)} voters", entity_type="Voter", ip_address=request.client.host if request.client else None)
+    pledge_str = "Yes" if data.is_pledged else "No"
+    log_activity(db, "bulk_pledge_update", user=user, details=f"Bulk pledge update to '{pledge_str}' for {len(voters)} voters", entity_type="Voter", ip_address=request.client.host if request.client else None)
 
     return {"message": f"Updated pledge status for {len(voters)} voters"}
 

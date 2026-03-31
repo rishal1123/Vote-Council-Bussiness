@@ -7,7 +7,7 @@ from typing import Optional
 
 from app.database import get_db
 from app.models import Voter, Box, Focal, Candidate, User
-from app.models.voter import VoteStatus, PledgeStatus, voter_focal
+from app.models.voter import VoteStatus, voter_focal
 from app.models.user import UserRole
 from app.services.auth import get_current_user_required
 
@@ -63,7 +63,7 @@ def get_dashboard_stats(db: Session, focal: Optional[Focal] = None) -> dict:
     # Single aggregate query for all vote status counts + pledge count
     stats_row = _base_query().with_entities(
         func.count(Voter.id).label('total'),
-        func.sum(case((Voter.is_pledged == PledgeStatus.yes, 1), else_=0)).label('pledged'),
+        func.sum(case((Voter.is_pledged == True, 1), else_=0)).label('pledged'),
         func.sum(case((Voter.vote_status == VoteStatus.not_voted, 1), else_=0)).label('not_voted'),
         func.sum(case((Voter.vote_status == VoteStatus.voted_pledged, 1), else_=0)).label('voted_pledged'),
         func.sum(case((Voter.vote_status == VoteStatus.voted_other, 1), else_=0)).label('voted_other'),
@@ -145,14 +145,14 @@ def get_dashboard_stats(db: Session, focal: Optional[Focal] = None) -> dict:
         total_with_candidate += count
         candidate_stats.append({
             "id": c.id, "name": c.name, "party": c.party,
-            "number": c.number, "is_pledged": c.is_pledged, "votes": count
+            "number": c.number, "color": c.color, "is_pledged": c.is_pledged, "votes": count
         })
 
     undisclosed_count = total_voted - total_with_candidate
     if undisclosed_count > 0:
         candidate_stats.append({
             "id": 0, "name": "Undisclosed", "party": "Did not disclose",
-            "number": None, "is_pledged": False, "votes": undisclosed_count
+            "number": None, "color": "#8D99AE", "is_pledged": False, "votes": undisclosed_count
         })
     candidate_stats.sort(key=lambda x: x["votes"], reverse=True)
 
