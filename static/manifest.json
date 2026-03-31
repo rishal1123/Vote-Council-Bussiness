@@ -1,11 +1,11 @@
 {
     "name": "VoteCouncil - Voter Management",
     "short_name": "VoteCouncil",
-    "description": "Voter Management PWA for Election Day",
+    "description": "Voter Management PWA for Maldivian Elections",
     "start_url": "/dashboard",
     "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#0d6efd",
+    "background_color": "#F0F0EE",
+    "theme_color": "#0D3B2E",
     "orientation": "portrait-primary",
     "icons": [
         {
