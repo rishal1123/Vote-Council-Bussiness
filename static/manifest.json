@@ -1,6 +1,6 @@
 {
-    "name": "VoteCouncil - Voter Management",
-    "short_name": "VoteCouncil",
+    "name": "Council Vote - Voter Management",
+    "short_name": "Council Vote",
     "description": "Voter Management PWA for Maldivian Elections",
     "start_url": "/dashboard",
     "display": "standalone",
